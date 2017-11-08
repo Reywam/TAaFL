@@ -730,5 +730,7 @@ int main()
 		DrawMooreGraph(output, newTable);
 	}
 
+	system("dot -Tpng -odia.png out.dot");
+
     return 0;
 }

@@ -338,6 +338,22 @@ vector<double> CalculateWeights(vector<pair<string, State>> const &graph)
 	return weights;
 }
 
+vector<string> CalculateMealeyWeights(vector<pair<string, State>> const &graph)
+{
+	vector<string> weights;
+
+	for (auto it = graph.begin(); it != graph.end(); it++)
+	{
+		for (size_t i = 0; i < it->second.transitions.size(); i++)
+		{
+			string weight = to_string(i + 1) + "/" + it->second.sygnals[i];
+			weights.push_back(weight);
+		}
+	}
+
+	return weights;
+}
+
 void DrawMooreGraph(ofstream &output, vector<pair<string, State>> const &graphMatrix)
 {
 	using Edge = std::pair<int, int>;
@@ -355,16 +371,20 @@ void DrawMooreGraph(ofstream &output, vector<pair<string, State>> const &graphMa
 	Graph graph(edges.begin(), edges.end(), weights.begin(),
 		VERTEX_COUNT);
 
-	//using VertexesNames = boost::property_map<Graph, boost::vertex_name_t>::type;
-	//VertexesNames vertexesNames = boost::get(boost::vertex_name, graph);
+	using VertexesNames = boost::property_map<Graph, boost::vertex_name_t>::type;
+	VertexesNames vertexesNames = boost::get(boost::vertex_name, graph);
+	
+	for (size_t i = 0; i < graphMatrix.size(); i++)
+	{
+		vertexesNames[i] = (to_string(i) + "/" + graphMatrix[i].first);
+	}
 
 	boost::dynamic_properties dp;
 	dp.property("weight", boost::get(boost::edge_weight,
 		graph));
 	dp.property("label", boost::get(boost::edge_weight,
 		graph));
-	//dp.property("node_id", vertexesNames);
-	dp.property("node_id", boost::get(boost::vertex_index, graph));
+	dp.property("node_id", vertexesNames);
 
 	boost::write_graphviz_dp(output, graph, dp);
 }
@@ -604,25 +624,21 @@ void DrawMealeyGraph(ofstream &output, vector<pair<string, State>> const &graphM
 		boost::vecS,
 		boost::vecS, boost::directedS,
 		boost::property<boost::vertex_name_t, std::string>,
-		boost::property<boost::edge_weight_t, double>
+		boost::property<boost::edge_weight_t, string>
 	>;
 
 	const size_t VERTEX_COUNT = graphMatrix.size();
 	vector<Edge> edges = FindEdges(graphMatrix);
-	std::vector<double> weights = CalculateWeights(graphMatrix);
+	std::vector<string> weights = CalculateMealeyWeights(graphMatrix);
 
 	Graph graph(edges.begin(), edges.end(), weights.begin(),
 		VERTEX_COUNT);
-
-	//using VertexesNames = boost::property_map<Graph, boost::vertex_name_t>::type;
-	//VertexesNames vertexesNames = boost::get(boost::vertex_name, graph);
 
 	boost::dynamic_properties dp;
 	dp.property("weight", boost::get(boost::edge_weight,
 		graph));
 	dp.property("label", boost::get(boost::edge_weight,
 		graph));
-	//dp.property("node_id", vertexesNames);
 	dp.property("node_id", boost::get(boost::vertex_index, graph));
 
 	boost::write_graphviz_dp(output, graph, dp);

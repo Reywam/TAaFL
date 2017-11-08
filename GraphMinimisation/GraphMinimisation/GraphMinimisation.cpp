@@ -32,17 +32,6 @@ struct EqualityClass
 	vector<State> states;
 };
 
-
-void ReadMoore(unordered_map<string, vector<int>> &map, ifstream &input)
-{
-
-}
-
-void ReadMealley(unordered_map<string, vector<int>> &map, ifstream &input)
-{
-
-}
-
 void ReadMooreDataToMap(unordered_map<string, vector<int>> &map, ifstream &input)
 {
 	string sygnals = "";
@@ -215,7 +204,6 @@ void ReplaceTransitions(vector<EqualityClass> &eqClasses, unordered_map<string, 
 			vector<string> transitions = states[state].transitions;
 			for (size_t transition = 0; transition < transitions.size(); transition++)
 			{
-				//Заменить переходы на те, которые стоят в начальной таблице переходов
 				auto it = map.find(transitions[transition]);
 				eqClasses[i].states[state].transitions[transition] = it->second;
 			}
@@ -245,7 +233,6 @@ vector<pair<string, State>> CreateNewTable(vector<EqualityClass> const &eqClasse
 
 	for (size_t eqClass = 0; eqClass < eqClasses.size(); eqClass++)
 	{
-		// Вершина с переходами
 		State state = eqClasses[eqClass].states[0];
 		bool found = false;
 		for (auto it = eqvIndexes.begin(); it != eqvIndexes.end(); it++)
@@ -254,7 +241,6 @@ vector<pair<string, State>> CreateNewTable(vector<EqualityClass> const &eqClasse
 			{
 				if (to_string(it->second[vertexName] + 1) == state.name)
 				{
-					//Биндим сигнал->состояние
 					table.push_back(make_pair(it->first, state));
 					found = true;
 					break;

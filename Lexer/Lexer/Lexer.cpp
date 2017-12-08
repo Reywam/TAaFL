@@ -25,13 +25,16 @@ enum tokenTipe {
 };
 
 const regex ID_PATTERN("([a-z]|[A-Z])+[0-9]*");
+
 const regex NUMBER_PATTERN("[0-9]+");
 const regex FIXED_FLOAT_PATTERN("[0-9]+\\.[0-9]+");
 const regex FLOAT_PATTERN("[0-9]+\\.[0-9]+[0-9]*[E][+|-][0-9]+");
+
 const regex DELIMITER_PATTERN(";| |\n");
 const regex OPERATOR_PATTERN("\\+|-|\\*|\\/");
 const regex ASSIGNMENT_PATTERN("=");
 const regex COMPARATOR_PATTERN("<=|>=|==|!=|>|<");
+const regex CONDITION_PATTERN("if|else");
 
 const regex OPEN_BRAKET_PATTERN("[(]|[{]");
 const regex CLOSE_BRAKET_PATTERN("[)]|[}]");
@@ -111,10 +114,8 @@ public:
 	}
 };
 
-const set<string> KEYWORDS = {
-	"if"
-	, "else"
-	, "for"
+const set<string> KEYWORDS = {	
+	"for"
 	, "string"
 	, "int"
 	, "char"
@@ -180,22 +181,23 @@ Token GetToken(const string &lexeme) {
 		if (KEYWORDS.find(lexeme) != KEYWORDS.end()) {
 			// Ключевое слово
 			tok = Token(KEYWORD, lexeme);
-		} else {
+		} else if (regex_match(lexeme, CONDITION_PATTERN)) {
+			tok = Token(CONDITION, lexeme);
+		} else  {
 			// Идентификатор
 			tok = Token(IDENTIFIER, lexeme);
 		}
 	} else if(regex_match(lexeme, NUMBER_PATTERN)) {
 		// Целое число
-		tok = Token(NUMBER, lexeme);
-	} else if (regex_match(lexeme, NUMBER_PATTERN)) {
-		// Целое число
-		tok = Token(NUMBER, lexeme);
+		tok = Token(NUMBER, lexeme);	
 	} else if (regex_match(lexeme, FIXED_FLOAT_PATTERN)) {
 		// Число с фикс.точкой
 		tok = Token(FIXED_FLOAT, lexeme);
 	} else if (regex_match(lexeme, FLOAT_PATTERN)) {
+		// Float
 		tok = Token(FLOAT, lexeme);
 	} else if (regex_match(lexeme, DELIMITER_PATTERN)) {
+		// Разделители
 		tok = Token(DELIMITER, lexeme);
 	} else if (regex_match(lexeme, OPERATOR_PATTERN)) {
 		tok = Token(OPERATOR, lexeme);
@@ -230,18 +232,24 @@ int main(int argc, char* argv[])
 	string lexeme;	
 	for (size_t i = 0; i < codeString.size(); i++) {
 		char currentChar = codeString[i];		
-		if (DELIMITERS.find(currentChar) == DELIMITERS.end()) {
-			lexeme += currentChar;			
-		} else {
+		
+		if (DELIMITERS.find(currentChar) != DELIMITERS.end() && lexeme == "") {
+			lexeme += currentChar;
+			Token tok; 
+			tok = GetToken(lexeme);
+			lexeme = "";
+			cout << tok.toString() << endl;
+		} else if (DELIMITERS.find(currentChar) != DELIMITERS.end() && lexeme != "") {
 			Token tok;
-			if (lexeme == "") {
-				lexeme += currentChar;
-			}
-
+			tok = GetToken(lexeme);
+			lexeme = "";
+			lexeme += currentChar;
+			cout << tok.toString() << endl;
 			tok = GetToken(lexeme);
 			cout << tok.toString() << endl;
 			lexeme = "";
-			// TODO сделать нормальное чтение
+		} else {
+			lexeme += currentChar;
 		}
 	}
 

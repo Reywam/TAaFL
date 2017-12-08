@@ -146,12 +146,14 @@ void RecalculateEqvClass(EqualityClass eqClass, vector<EqualityClass> &classes)
 vector<EqualityClass> RecalculateEqvClasses(vector<EqualityClass> eqvClasses)
 {
 	vector<EqualityClass> allNewClasses;
-
+	size_t name = 0;
 	while(!eqvClasses.empty())
 	{
 		EqualityClass eqvClass = *eqvClasses.begin();
+		eqvClass.name = name;
 		RecalculateEqvClass(eqvClass, allNewClasses);
 		eqvClasses.erase(eqvClasses.begin());
+		name++;
 	}
 
 	return allNewClasses;
@@ -184,7 +186,7 @@ unordered_map<string, string> FindEqClassOfStates(vector<EqualityClass> const &e
 
 				if (it->first == vertexName)
 				{
-					it->second = eqClasses[i].name;
+					it->second = to_string(i);//eqClasses[i].name;
 					break;
 				}
 			}
@@ -219,7 +221,9 @@ void ReplaceTransitions(vector<EqualityClass> &eqClasses,
 		vector<State> states = eqClasses[i].states;
 		for (size_t state = 0; state < states.size(); state++)
 		{
-			auto newTransitions = map.find(states[state].name);
+			string stateName = states[state].name;
+			auto newTransitions = map.find(stateName);
+			//auto newTransitions = map.find(to_string(state));
 			eqClasses[i].states[state].transitions.clear();
 			eqClasses[i].states[state].transitions = newTransitions->second;
 		}
@@ -239,7 +243,8 @@ vector<pair<string, State>> CreateNewTable(vector<EqualityClass> const &eqClasse
 		{
 			for (size_t vertexName = 0; vertexName < it->second.size(); vertexName++)
 			{
-				if (to_string(it->second[vertexName] + 1) == state.name)
+				//if (to_string(it->second[vertexName] + 1) == state.name)
+				if (to_string(it->second[vertexName]) == state.name)
 				{
 					table.push_back(make_pair(it->first, state));
 					found = true;
@@ -309,12 +314,13 @@ vector<pair<int, int>> FindEdges(vector<pair<string, State>> const &graph)
 	vector<pair<int, int>> edges;
 	size_t stateNum = 0;
 	for (auto it = graph.begin(); it != graph.end(); it++)
-	{
+	{		
+		//int firstElement = stoi(it->second.name);
 		int firstElement = stateNum;
 
 		for (size_t i = 0; i < it->second.transitions.size(); i++)
-		{
-			int secondElement = stoi(it->second.transitions[i]) - 1;
+		{			
+			int secondElement = stoi(it->second.transitions[i]);
 			edges.push_back(make_pair(firstElement, secondElement));
 		}
 		stateNum++;
@@ -675,7 +681,7 @@ int main()
 		}
 
 		vector<pair<string, State>> newTable = CreateNewTable(eqvClasses, states);
-		size_t name = 1;
+		size_t name = 0;
 		for (size_t i = 0; i < newTable.size(); i++)
 		{
 			cout
@@ -719,7 +725,7 @@ int main()
 		}
 
 		vector<pair<string, State>> newTable = CreateNewTable(eqvClasses, eqvIndexes);
-		size_t name = 1;
+		size_t name = 0;
 		for (size_t i = 0; i < newTable.size(); i++)
 		{
 			cout << newTable[i].first << ": " << name << " "
@@ -733,4 +739,4 @@ int main()
 	system("dot -Tpng -odia.png out.dot");
 
     return 0;
-}
+} 

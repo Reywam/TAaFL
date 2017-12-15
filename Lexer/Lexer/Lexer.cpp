@@ -7,6 +7,11 @@
 
 using namespace std;
 
+enum states {
+	OK
+	, NOT_OK
+};
+
 enum tokenTipe {
 	ERROR
 	, IDENTIFIER
@@ -22,6 +27,10 @@ enum tokenTipe {
 	, OPERATOR
 	, OPEN_BRAKET
 	, CLOSE_BRAKET
+	, CHAR
+	, BOOLEAN
+	, ARRAY_OPEN
+	, ARRAY_CLOSE
 };
 
 const regex ID_PATTERN("([a-z]|[A-Z])+[0-9]*");
@@ -30,7 +39,7 @@ const regex NUMBER_PATTERN("[0-9]+");
 const regex FIXED_FLOAT_PATTERN("[0-9]+\\.[0-9]+");
 const regex FLOAT_PATTERN("[0-9]+\\.[0-9]+[0-9]*[E][+|-][0-9]+");
 
-const regex DELIMITER_PATTERN(";| |\n");
+const regex DELIMITER_PATTERN(";|\n");
 const regex OPERATOR_PATTERN("\\+|-|\\*|\\/");
 const regex ASSIGNMENT_PATTERN("=");
 const regex COMPARATOR_PATTERN("<=|>=|==|!=|>|<");
@@ -38,6 +47,12 @@ const regex CONDITION_PATTERN("if|else");
 
 const regex OPEN_BRAKET_PATTERN("[(]|[{]");
 const regex CLOSE_BRAKET_PATTERN("[)]|[}]");
+
+const regex OPEN_ARRAY_BRAKET_PATTERN("[\\[]");
+const regex CLOSE_ARRAY_BRAKET_PATTERN("[\\]]");
+
+const regex CHAR_PATTERN("['][a-z|A-Z][']");
+const regex BOOLEAN_PATTERN("true|false");
 
 class Token{
 	size_t id;
@@ -104,6 +119,18 @@ public:
 			case CLOSE_BRAKET:
 				result = "CLOSE_BRAKET";
 				break;
+			case BOOLEAN:
+				result = "BOOLEAN";
+				break;
+			case CHAR:
+				result = "CHAR";
+				break;
+			case ARRAY_OPEN:
+				result = "ARRAY_OPEN";
+				break;
+			case ARRAY_CLOSE:
+				result = "ARRAY_CLOSE";
+				break;
 		}
 		return result;		
 	}
@@ -119,8 +146,10 @@ const set<string> KEYWORDS = {
 	, "string"
 	, "int"
 	, "char"
-	, "bool"
+	, "boolean"
 	, "float"
+	, "true"
+	, "false"
 };
 
 const set<char> DELIMITERS = {
@@ -132,6 +161,8 @@ const set<char> DELIMITERS = {
 	, '('
 	, '{'
 	, '}'
+	, '['
+	, ']'
 };
 
 const set<char> OPERATORS = {
@@ -173,6 +204,15 @@ string ReadProgrammCodeToString(ifstream &input) {
 	return codeString;
 }
 
+void SkipComment(size_t &pos, const string &str) {
+	for (;pos < str.size(); pos++) {
+		if (str[pos] == '/' && str[pos - 1] == '*') {
+			//pos++;
+			break;
+		}
+	}
+}
+
 Token GetToken(const string &lexeme) {
 	// Проверка лексемы по регуляркам
 	Token tok;
@@ -209,11 +249,76 @@ Token GetToken(const string &lexeme) {
 		tok = Token(OPEN_BRAKET, lexeme);
 	} else if (regex_match(lexeme, CLOSE_BRAKET_PATTERN)) {
 		tok = Token(CLOSE_BRAKET, lexeme);
+	} else if (regex_match(lexeme, OPEN_ARRAY_BRAKET_PATTERN)) {
+		tok = Token(ARRAY_OPEN, lexeme);
+	} else if (regex_match(lexeme, CLOSE_ARRAY_BRAKET_PATTERN)) {
+		tok = Token(ARRAY_CLOSE, lexeme);
+	} else if (regex_match(lexeme, CHAR_PATTERN)) {
+		tok = Token(CHAR, lexeme);
 	} else {
 		tok = Token(ERROR, lexeme);
 	}
 
 	return tok;
+}
+
+bool isIdentidier(const string &lexeme) {
+	bool result = false;
+	size_t state;
+	if (isalpha(lexeme[0])) {		
+		state = OK;
+		for (size_t i = 0; i < lexeme.size(); i++) {
+			result = true;
+			if (state == states::NOT_OK) {
+				result = false;
+				break;
+			}
+
+			char currenChar = lexeme[i];
+			if (isalpha(currenChar) || isdigit(currenChar)) {
+				state = states::OK;
+			}
+		}
+	}	
+	
+	return result;
+}
+
+bool isKeyword(const string &lexeme) {
+	bool result = false;
+
+	if (KEYWORDS.find(lexeme) != KEYWORDS.end()) {
+		result = true;
+	}
+
+	return result;
+}
+
+bool isCondition(const string &lexeme) {
+	bool result = false;
+
+	if (lexeme == "if" || "else") {
+		result = true;
+	}
+
+	return result;
+}
+
+size_t ProcessLexeme(const string &lexeme) {
+	size_t type = tokenTipe::ERROR;
+
+	if (isCondition(lexeme)) {
+		type = CONDITION;
+		cout << "___CONDITION" << endl;
+	} else if (isKeyword(lexeme)) {
+		type = KEYWORD;
+		cout << "___KEYWORD" << endl;
+	} else if (isIdentidier(lexeme)) {
+		type = IDENTIFIER;
+		cout << "___IDENTIFIER" << endl;
+	}
+
+	return type;
 }
 
 int main(int argc, char* argv[])
@@ -229,11 +334,19 @@ int main(int argc, char* argv[])
 
 	string codeString = ReadProgrammCodeToString(input);	
 
-	string lexeme;	
+	//ProcessLexeme("if");
+
+	string lexeme;
 	for (size_t i = 0; i < codeString.size(); i++) {
-		char currentChar = codeString[i];		
-		
-		if (DELIMITERS.find(currentChar) != DELIMITERS.end() && lexeme == "") {
+		char currentChar = codeString[i];
+		if (currentChar == '*' && lexeme == "/") {
+			lexeme = "";
+			currentChar = '\n';
+			SkipComment(i, codeString);
+		}
+		if (DELIMITERS.find(currentChar) != DELIMITERS.end() && lexeme == "" 
+			&& currentChar != ' '
+			&& currentChar != '\n') {
 			lexeme += currentChar;
 			Token tok; 
 			tok = GetToken(lexeme);
@@ -245,10 +358,13 @@ int main(int argc, char* argv[])
 			lexeme = "";
 			lexeme += currentChar;
 			cout << tok.toString() << endl;
-			tok = GetToken(lexeme);
-			cout << tok.toString() << endl;
+			if (currentChar != ' ' && currentChar != '\n') {
+				tok = GetToken(lexeme);
+				cout << tok.toString() << endl;				
+			}
 			lexeme = "";
-		} else {
+			
+		} else if (currentChar != ' ' && currentChar != '\n') {
 			lexeme += currentChar;
 		}
 	}

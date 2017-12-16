@@ -180,6 +180,15 @@ const set<string> DELIMITERS = {
 	, "<", ">", ">=", "<=", "==", "!="
 };
 
+const set<char> IGNORED_SEPARATORS = {
+	' '
+	, '\n'
+	, ')'
+	, '}'
+	, ']'
+	, ';'
+};
+
 string ReadProgrammCodeToString(ifstream &input) {
 	string codeString;
 	string inputLine;
@@ -373,6 +382,20 @@ size_t ProcessLexeme(const string &lexeme) {
 		tok = Token(FLOAT, lexeme);
 	} else if (isDelimiter(lexeme)) {
 		tok = Token(DELIMITER, lexeme);
+	} else if (lexeme == "=") {
+		tok = Token(ASSIGNMENT, lexeme);
+	} else if (lexeme == "(") {
+		tok = Token(OPEN_BRAKET, lexeme);
+	} else if (lexeme == ")") {
+		tok = Token(CLOSE_BRAKET, lexeme);
+	} else if (lexeme == "[") {
+		tok = Token(ARRAY_OPEN, lexeme);
+	} else if (lexeme == "]") {
+		tok = Token(ARRAY_CLOSE, lexeme);
+	} else if (lexeme == "{") {
+		tok = Token(OPEN_BRAKET, lexeme);
+	} else if (lexeme == "}") {
+		tok = Token(CLOSE_BRAKET, lexeme);
 	}
 
 	cout << tok.toString() << endl;
@@ -421,7 +444,8 @@ int main(int argc, char* argv[])
 
 		if (isdigit(currentChar) || isalpha(currentChar)) {
 			lexeme += currentChar;
-		} else if (!(isdigit(nextChar) || isalpha(nextChar)) && nextChar != ' ' && nextChar != '\n') {
+		} else if (!(isdigit(nextChar) || isalpha(nextChar)) 
+			&& IGNORED_SEPARATORS.find(nextChar) == IGNORED_SEPARATORS.end()) {
 			lexeme += currentChar;
 			lexeme += nextChar;
 			ProcessLexeme(lexeme);

@@ -7,11 +7,6 @@
 
 using namespace std;
 
-enum states {
-	OK
-	, NOT_OK
-};
-
 enum tokenTipe {
 	ERROR
 	, IDENTIFIER
@@ -33,16 +28,10 @@ enum tokenTipe {
 	, ARRAY_CLOSE
 };
 
-const regex ID_PATTERN("([a-z]|[A-Z])+[0-9]*");
-
-const regex NUMBER_PATTERN("[0-9]+");
 const regex FIXED_FLOAT_PATTERN("[0-9]+\\.[0-9]+");
 const regex FLOAT_PATTERN("[0-9]+\\.[0-9]+[0-9]*[E][+|-][0-9]+");
 
-const regex DELIMITER_PATTERN(";|\n");
-const regex OPERATOR_PATTERN("\\+|-|\\*|\\/");
 const regex ASSIGNMENT_PATTERN("=");
-const regex COMPARATOR_PATTERN("<=|>=|==|!=|>|<");
 const regex CONDITION_PATTERN("if|else");
 
 const regex OPEN_BRAKET_PATTERN("[(]|[{]");
@@ -152,24 +141,11 @@ const set<string> KEYWORDS = {
 	, "false"
 };
 
-const set<char> DELIMITERS = {
-	','	
-	, ';'
-	, ' '
-	, '\n'	
-	, ')'
-	, '('
-	, '{'
-	, '}'
-	, '['
-	, ']'
-};
-
-const set<char> OPERATORS = {
-	'+'
-	, '-'
-	, '*'
-	, '/'
+const set<string> OPERATORS = {
+	"+"
+	, "-"
+	, "*"
+	, "/"
 };
 
 const set<string> COMPARATORS = {
@@ -181,15 +157,27 @@ const set<string> COMPARATORS = {
 	, "<="
 };
 
-const set<char> ASSIGNMENTS = {
-	'='
+const set<string> ASSIGNMENTS = {
+	"="
 };
 
-const set<char> BRAKETS = {
-	'('
-	, ')'
-	, '{'
-	, '}'
+const set<string> BRAKETS = {
+	"("
+	, ")"
+	, "{"
+	, "}"
+};
+
+const set<string> DELIMITERS = {
+	","
+	, ";"
+	, "\n"
+	, "(", ")"
+	, "[", "]"
+	, "{", "}"
+	, "+", "-", "*", "/"
+	, "="
+	, "<", ">", ">=", "<=", "==", "!="
 };
 
 string ReadProgrammCodeToString(ifstream &input) {
@@ -207,76 +195,24 @@ string ReadProgrammCodeToString(ifstream &input) {
 void SkipComment(size_t &pos, const string &str) {
 	for (;pos < str.size(); pos++) {
 		if (str[pos] == '/' && str[pos - 1] == '*') {
-			//pos++;
 			break;
 		}
 	}
 }
 
-Token GetToken(const string &lexeme) {
-	// Проверка лексемы по регуляркам
-	Token tok;
-	
-	if (regex_match(lexeme, ID_PATTERN)) {
-		if (KEYWORDS.find(lexeme) != KEYWORDS.end()) {
-			// Ключевое слово
-			tok = Token(KEYWORD, lexeme);
-		} else if (regex_match(lexeme, CONDITION_PATTERN)) {
-			tok = Token(CONDITION, lexeme);
-		} else  {
-			// Идентификатор
-			tok = Token(IDENTIFIER, lexeme);
-		}
-	} else if(regex_match(lexeme, NUMBER_PATTERN)) {
-		// Целое число
-		tok = Token(NUMBER, lexeme);	
-	} else if (regex_match(lexeme, FIXED_FLOAT_PATTERN)) {
-		// Число с фикс.точкой
-		tok = Token(FIXED_FLOAT, lexeme);
-	} else if (regex_match(lexeme, FLOAT_PATTERN)) {
-		// Float
-		tok = Token(FLOAT, lexeme);
-	} else if (regex_match(lexeme, DELIMITER_PATTERN)) {
-		// Разделители
-		tok = Token(DELIMITER, lexeme);
-	} else if (regex_match(lexeme, OPERATOR_PATTERN)) {
-		tok = Token(OPERATOR, lexeme);
-	} else if (regex_match(lexeme, ASSIGNMENT_PATTERN)) {
-		tok = Token(ASSIGNMENT, lexeme);
-	} else if (regex_match(lexeme, COMPARATOR_PATTERN)) {
-		tok = Token(COMPARATOR, lexeme);
-	} else if (regex_match(lexeme, OPEN_BRAKET_PATTERN)) {
-		tok = Token(OPEN_BRAKET, lexeme);
-	} else if (regex_match(lexeme, CLOSE_BRAKET_PATTERN)) {
-		tok = Token(CLOSE_BRAKET, lexeme);
-	} else if (regex_match(lexeme, OPEN_ARRAY_BRAKET_PATTERN)) {
-		tok = Token(ARRAY_OPEN, lexeme);
-	} else if (regex_match(lexeme, CLOSE_ARRAY_BRAKET_PATTERN)) {
-		tok = Token(ARRAY_CLOSE, lexeme);
-	} else if (regex_match(lexeme, CHAR_PATTERN)) {
-		tok = Token(CHAR, lexeme);
-	} else {
-		tok = Token(ERROR, lexeme);
-	}
-
-	return tok;
-}
-
-bool isIdentidier(const string &lexeme) {
+bool isIdentifier(const string &lexeme) {
 	bool result = false;
-	size_t state;
-	if (isalpha(lexeme[0])) {		
-		state = OK;
+
+	if (isalpha(lexeme[0])) {				
 		for (size_t i = 0; i < lexeme.size(); i++) {
-			result = true;
-			if (state == states::NOT_OK) {
-				result = false;
-				break;
-			}
+			result = false;
 
 			char currenChar = lexeme[i];
 			if (isalpha(currenChar) || isdigit(currenChar)) {
-				state = states::OK;
+				result = true;
+			}
+			else {
+				break;
 			}
 		}
 	}	
@@ -297,7 +233,118 @@ bool isKeyword(const string &lexeme) {
 bool isCondition(const string &lexeme) {
 	bool result = false;
 
-	if (lexeme == "if" || "else") {
+	if (lexeme == "if" || lexeme == "else") {
+		result = true;
+	}
+
+	return result;
+}
+
+bool isOperator(const string &lexeme) {
+	bool result = true;
+
+	if (OPERATORS.find(lexeme) == OPERATORS.end()) {
+		result = false;
+	}
+
+	return result;
+}
+
+bool isComparator(const string &lexeme) {
+	bool result = true;
+
+	if (COMPARATORS.find(lexeme) == COMPARATORS.end()) {
+		result = false;
+	}
+
+	return result;
+}
+
+bool isNumber(const string &lexeme) {
+	bool result = true;
+
+	for (size_t i = 0; i < lexeme.size(); i++) {
+		if (!isdigit(lexeme[i])) {
+			result = false;
+			break;
+		}
+	}
+
+	return result;
+}
+
+bool isFixedFloat(const string &lexeme) {
+	bool result = true;
+	size_t pointPos = lexeme.find_first_of('.');
+
+	for (size_t i = 0; i < pointPos; i++) {
+		if (!isdigit(lexeme[i])) {
+			result = false;
+			break;
+		}
+	}
+
+	if (result) {
+		for (size_t i = pointPos + 1; i < lexeme.size(); i++) {
+			if (!isdigit(lexeme[i])) {
+				result = false;
+				break;
+			}
+		}
+	}
+	return result;
+}
+
+bool isFloat(const string &lexeme) {
+	bool result = true;
+
+	size_t pointPos = lexeme.find('.');
+	size_t expPos = lexeme.find('E');
+
+	if (pointPos >= lexeme.size() && pointPos <= 0) {
+		return false;
+	}
+
+	if (expPos >= lexeme.size() && expPos <= 0) {
+		return false;;
+	}
+
+	for (size_t i = 0; i < pointPos; i++) {
+		if (!isdigit(lexeme[i])) {
+			result = false;
+			break;
+		}
+	}
+
+	if (result) {
+		for (size_t i = pointPos + 1; i < expPos; i++) {
+			if (!isdigit(lexeme[i])) {
+				result = false;
+				break;
+			}
+		}
+	}
+
+	if (result) {
+		if (!(lexeme[expPos + 1] == '-' || lexeme[expPos + 1] == '+')) {
+			return false;
+		}
+
+		for (size_t i = expPos + 2; expPos + 2 < lexeme.size(), i < lexeme.size(); i++) {
+			if (!isdigit(lexeme[i])) {
+				result = false;
+				break;
+			}
+		}
+	}
+
+	return result;
+}
+
+bool isDelimiter(const string &lexeme) {
+	bool result = false;
+
+	if (lexeme == ";") {
 		result = true;
 	}
 
@@ -305,67 +352,91 @@ bool isCondition(const string &lexeme) {
 }
 
 size_t ProcessLexeme(const string &lexeme) {
-	size_t type = tokenTipe::ERROR;
+
+	Token tok = Token(ERROR, lexeme);
 
 	if (isCondition(lexeme)) {
-		type = CONDITION;
-		cout << "___CONDITION" << endl;
+		tok = Token(CONDITION, lexeme);		
 	} else if (isKeyword(lexeme)) {
-		type = KEYWORD;
-		cout << "___KEYWORD" << endl;
-	} else if (isIdentidier(lexeme)) {
-		type = IDENTIFIER;
-		cout << "___IDENTIFIER" << endl;
+		tok = Token(KEYWORD, lexeme);
+	} else if (isIdentifier(lexeme)) {
+		tok = Token(IDENTIFIER, lexeme);
+	} else if (isOperator(lexeme)) {
+		tok = Token(OPERATOR, lexeme);
+	} else if (isComparator(lexeme)) {
+		tok = Token(COMPARATOR, lexeme);
+	} else if (isNumber(lexeme)) {
+		tok = Token(NUMBER, lexeme);
+	} else if (isFixedFloat(lexeme)) {
+		tok = Token(FIXED_FLOAT, lexeme);		
+	} else if (isFloat(lexeme)) {
+		tok = Token(FLOAT, lexeme);
+	} else if (isDelimiter(lexeme)) {
+		tok = Token(DELIMITER, lexeme);
 	}
 
-	return type;
+	cout << tok.toString() << endl;
+
+	return 0;
 }
 
 int main(int argc, char* argv[])
-{
-	ifstream input;
-	
+{		
 	if (argc != 2) {
 		cout << "Choose input file." << endl;
 		return 1;
 	}
 
-	input = ifstream(argv[1]);
+	ifstream input = ifstream(argv[1]);
 
 	string codeString = ReadProgrammCodeToString(input);	
-
-	//ProcessLexeme("if");
 
 	string lexeme;
 	for (size_t i = 0; i < codeString.size(); i++) {
 		char currentChar = codeString[i];
-		if (currentChar == '*' && lexeme == "/") {
-			lexeme = "";
-			currentChar = '\n';
-			SkipComment(i, codeString);
+		char nextChar = codeString[i + 1];
+
+		if (currentChar == ' ' || currentChar == '\n') {
+			continue;
 		}
-		if (DELIMITERS.find(currentChar) != DELIMITERS.end() && lexeme == "" 
-			&& currentChar != ' '
-			&& currentChar != '\n') {
+
+		if (currentChar == '/' && nextChar == '*') {
+			SkipComment(i, codeString);
+			continue;
+		}
+
+		if (isdigit(currentChar) && nextChar == '.') {
 			lexeme += currentChar;
-			Token tok; 
-			tok = GetToken(lexeme);
-			lexeme = "";
-			cout << tok.toString() << endl;
-		} else if (DELIMITERS.find(currentChar) != DELIMITERS.end() && lexeme != "") {
-			Token tok;
-			tok = GetToken(lexeme);
-			lexeme = "";
+			lexeme += nextChar;
+			i++;
+			continue;
+		}
+
+		if (currentChar == 'E' && (nextChar == '-' || nextChar == '+')) {
 			lexeme += currentChar;
-			cout << tok.toString() << endl;
-			if (currentChar != ' ' && currentChar != '\n') {
-				tok = GetToken(lexeme);
-				cout << tok.toString() << endl;				
-			}
-			lexeme = "";
-			
-		} else if (currentChar != ' ' && currentChar != '\n') {
+			lexeme += nextChar;
+			i++;
+			continue;
+		}
+
+		if (isdigit(currentChar) || isalpha(currentChar)) {
 			lexeme += currentChar;
+		} else if (!(isdigit(nextChar) || isalpha(nextChar)) && nextChar != ' ' && nextChar != '\n') {
+			lexeme += currentChar;
+			lexeme += nextChar;
+			ProcessLexeme(lexeme);
+			i++;
+			lexeme = "";
+		} else {
+			lexeme += currentChar;
+			ProcessLexeme(lexeme);
+			lexeme = "";
+		}
+
+		if ((isdigit(currentChar) || isalpha(currentChar))
+			&& !(isdigit(nextChar) || isalpha(nextChar))) {
+			ProcessLexeme(lexeme);
+			lexeme = "";
 		}
 	}
 

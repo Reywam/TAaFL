@@ -120,6 +120,10 @@ public:
 
 const set<string> KEYWORDS = {	
 	"for"
+	, "const"
+	, "class"
+	, "public"
+	, "private"
 	, "string"
 	, "int"
 	, "char"
@@ -159,6 +163,7 @@ const set<string> BRAKETS = {
 
 const set<string> DELIMITERS = {
 	","
+	, "."
 	, ";"
 	, "\n"
 	, "(", ")"
@@ -178,24 +183,27 @@ const set<char> IGNORED_SEPARATORS = {
 	, ';'
 };
 
-string ReadProgrammCodeToString(ifstream &input) {
-	string codeString;
-	string inputLine;
+const set<char> DUMMY_CHARS = {
+	' '
+	, '\n'
+	, '\t'
+};
 
-	while (getline(input, inputLine)) {
-		codeString += inputLine;
-		codeString += "\n";
-	}
-
-	return codeString;
-}
-
-void SkipComment(size_t &pos, const string &str) {
+void SkipComment(size_t &pos, const vector<char> &str) {
 	for (;pos < str.size(); pos++) {
-		if (str[pos] == '/' && str[pos - 1] == '*') {
+		if (str[pos] == '/' && str[pos - 1] == '*' || (str[pos] == EOF && str[pos] != 'я')) {
 			break;
 		}
 	}
+}
+
+void SkipLineComment(size_t &pos, const vector<char> &str) {
+	for (; pos < str.size(); pos++) {		
+		if (str[pos] == '\n' || (str[pos] == EOF && str[pos] != 'я')) {
+			break;
+		}
+	}
+	
 }
 
 bool isIdentifier(const string &lexeme) {
@@ -275,6 +283,10 @@ bool isFixedFloat(const string &lexeme) {
 	bool result = true;
 	size_t pointPos = lexeme.find_first_of('.');
 
+	if (pointPos == 0) {
+		result = false;
+	}
+
 	for (size_t i = 0; i < pointPos; i++) {
 		if (!isdigit(lexeme[i])) {
 			result = false;
@@ -342,8 +354,6 @@ bool isFloat(const string &lexeme) {
 bool isDelimiter(const string &lexeme) {
 	bool result = false;
 
-	/*if (lexeme == ";"
-		|| lexeme == ",") */
 	if(DELIMITERS.find(lexeme) != DELIMITERS.end()){
 		result = true;
 	}
@@ -354,7 +364,6 @@ bool isDelimiter(const string &lexeme) {
 size_t ProcessLexeme(const string &lexeme) {
 
 	Token tok = Token(ERROR, lexeme);
-
 	if (isCondition(lexeme)) {
 		tok = Token(CONDITION, lexeme);		
 	} else if (isKeyword(lexeme)) {
@@ -388,13 +397,13 @@ size_t ProcessLexeme(const string &lexeme) {
 	} else if (isDelimiter(lexeme)) {
 		tok = Token(DELIMITER, lexeme);
 	}
-
+	
 	cout << tok.toString() << endl;
 
 	return 0;
 }
 
-string ReadString(size_t &pos, const string &str) {
+string ReadString(size_t &pos, const vector<char> &str) {
 	string lexeme;
 	pos++;
 	for (; pos < str.size(); pos++) {
@@ -407,53 +416,98 @@ string ReadString(size_t &pos, const string &str) {
 	return lexeme;
 }
 
+void ReadDataToBuffer(ifstream &input, vector<char> &buffer, size_t bufferSize) {
+	char ch = NULL;
+	for (size_t i = 0; i < bufferSize && (int)input.tellg() != EOF; i++) {
+		if (i == 503) {
+			cout << endl;
+		}
+		ch = input.get();
+		buffer.push_back(ch);
+	}
+}
+
 int main(int argc, char* argv[])
-{		
+{
 	if (argc != 2) {
 		cout << "Choose input file." << endl;
 		return 1;
 	}
 
 	ifstream input = ifstream(argv[1]);
+	if (!input.is_open()) {
+		cout << "Failed to open file " << argv[1] << endl;
+		return 1;
+	}
 
-	char buffer[BUFFER_LENGTH];	
-	//input.read(buffer, BUFFER_LENGTH);		
-	int res = input.tellg();
+	const int blen = 2;
+	vector<char> buffer;
 	
-	string codeString = ReadProgrammCodeToString(input);
-
+	ReadDataToBuffer(input, buffer, BUFFER_LENGTH);	
 	string lexeme;
-	for (size_t i = 0; i < codeString.size(); i++) {
-		char currentChar = codeString[i];
-		char nextChar = codeString[i + 1];
+	for (size_t i = 0; buffer[i] != 'я' && buffer[i] != EOF; i++) {
+		if (i == buffer.size()) {
+			auto lastElem = buffer.back();
+			buffer.clear();			
+			buffer.push_back(lastElem);
+			i = 0;
+			ReadDataToBuffer(input, buffer, BUFFER_LENGTH);
+		}
 
-		if (currentChar == '\'' && codeString[i + 2] == '\'') {
+		char currentChar = buffer[i];
+		char nextChar = buffer[i + 1];
+
+		// Проверка символов-пустышек, их игнорим
+		if (DUMMY_CHARS.find(currentChar) != DUMMY_CHARS.end()) {
+			continue;
+		}
+
+		// Проверка компараторов
+		if ((currentChar == '='
+			|| currentChar == '!'
+			|| currentChar == '<'
+			|| currentChar == '>') && nextChar == '=') {
+			lexeme += currentChar;
 			lexeme += nextChar;
-			Token tok = Token(CHAR, lexeme);
+			i++;
+			Token tok = Token(COMPARATOR, lexeme);
 			cout << tok.toString() << endl;
-			i += 2;
 			lexeme = "";
 			continue;
 		}
 
+		// Проверка что это символ
+		if (currentChar == '\'' && buffer[i + 2] == '\'') {
+			lexeme += nextChar;
+			Token tok = Token(CHAR, lexeme);
+			cout << tok.toString() << endl;
+			i += 2;
+			lexeme = "";			
+			continue;
+		}
+
+		// Начало строки
 		if (currentChar == '"') {
-			lexeme = ReadString(i, codeString);
+			lexeme = ReadString(i, buffer);
 			Token tok = Token(STRING, lexeme);
 			cout << tok.toString() << endl;
 			lexeme = "";
 			continue;
 		}
 
-		if (currentChar == ' ' || currentChar == '\n') {
-			continue;
-		}
-
+		// Пропуск коммента
 		if (currentChar == '/' && nextChar == '*') {
-			SkipComment(i, codeString);
+			SkipComment(i, buffer);
 			continue;
 		}
 
-		if ((isdigit(currentChar) && nextChar == '.') 
+		if (currentChar == '/' && nextChar == '/') {
+			SkipLineComment(i, buffer);
+			continue;
+		}
+
+		// Обработка float чисел
+		if ((isdigit(currentChar) && nextChar == '.')
 			|| (currentChar == '.' && isdigit(nextChar))) {
 			lexeme += currentChar;
 			lexeme += nextChar;
@@ -468,35 +522,41 @@ int main(int argc, char* argv[])
 			continue;
 		}
 
+		// Обработка символа-небуквы
 		if (!(isdigit(currentChar) || isalpha(currentChar))
 			&& !(isdigit(nextChar) || isalpha(nextChar))) {
 			lexeme += currentChar;
 			ProcessLexeme(lexeme);
-			lexeme = "";
+			lexeme = "";			
 			continue;
 		}
 
-
 		if (isdigit(currentChar) || isalpha(currentChar)) {
 			lexeme += currentChar;
-		} else if (!(isdigit(nextChar) || isalpha(nextChar)) 
+		}
+		else if (!(isdigit(nextChar) || isalpha(nextChar))
 			&& IGNORED_SEPARATORS.find(nextChar) == IGNORED_SEPARATORS.end()) {
 			lexeme += currentChar;
 			lexeme += nextChar;
 			ProcessLexeme(lexeme);
 			i++;
-			lexeme = "";
-		} else {
+			lexeme = "";			
+		}
+		else {
 			lexeme += currentChar;
 			ProcessLexeme(lexeme);
-			lexeme = "";
+			lexeme = "";			
 		}
 
 		if ((isdigit(currentChar) || isalpha(currentChar))
 			&& !(isdigit(nextChar) || isalpha(nextChar))) {
 			ProcessLexeme(lexeme);
-			lexeme = "";
+			lexeme = "";			
 		}
+	}
+
+	if (lexeme != "") {
+		ProcessLexeme(lexeme);
 	}
 
     return 0;

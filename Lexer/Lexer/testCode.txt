@@ -1,3 +1,12 @@
-for(int i = 0) {
-array[12];
+int sort(int *A[], int col){
+    int temp;
+    for( int i = 0; i < col; i++)
+        for( int j = 0; i < col; j++){
+            if(A[j] > A[j + 1]){
+                temp = A [j];
+                A[j] = A[j + 1];
+                A[j + 1] = A [j];
+            }
+        }
+    return 0;
 }

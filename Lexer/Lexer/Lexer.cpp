@@ -4,8 +4,11 @@
 #include <set>
 #include <string>
 #include <regex>
+#include <vector>
 
 using namespace std;
+
+const unsigned int BUFFER_LENGTH = 1024;
 
 enum tokenTipe {
 	ERROR
@@ -27,21 +30,6 @@ enum tokenTipe {
 	, ARRAY_OPEN
 	, ARRAY_CLOSE
 };
-
-const regex FIXED_FLOAT_PATTERN("[0-9]+\\.[0-9]+");
-const regex FLOAT_PATTERN("[0-9]+\\.[0-9]+[0-9]*[E][+|-][0-9]+");
-
-const regex ASSIGNMENT_PATTERN("=");
-const regex CONDITION_PATTERN("if|else");
-
-const regex OPEN_BRAKET_PATTERN("[(]|[{]");
-const regex CLOSE_BRAKET_PATTERN("[)]|[}]");
-
-const regex OPEN_ARRAY_BRAKET_PATTERN("[\\[]");
-const regex CLOSE_ARRAY_BRAKET_PATTERN("[\\]]");
-
-const regex CHAR_PATTERN("['][a-z|A-Z][']");
-const regex BOOLEAN_PATTERN("true|false");
 
 class Token{
 	size_t id;
@@ -139,6 +127,7 @@ const set<string> KEYWORDS = {
 	, "float"
 	, "true"
 	, "false"
+	, "return"
 };
 
 const set<string> OPERATORS = {
@@ -353,7 +342,9 @@ bool isFloat(const string &lexeme) {
 bool isDelimiter(const string &lexeme) {
 	bool result = false;
 
-	if (lexeme == ";") {
+	/*if (lexeme == ";"
+		|| lexeme == ",") */
+	if(DELIMITERS.find(lexeme) != DELIMITERS.end()){
 		result = true;
 	}
 
@@ -380,8 +371,6 @@ size_t ProcessLexeme(const string &lexeme) {
 		tok = Token(FIXED_FLOAT, lexeme);		
 	} else if (isFloat(lexeme)) {
 		tok = Token(FLOAT, lexeme);
-	} else if (isDelimiter(lexeme)) {
-		tok = Token(DELIMITER, lexeme);
 	} else if (lexeme == "=") {
 		tok = Token(ASSIGNMENT, lexeme);
 	} else if (lexeme == "(") {
@@ -396,11 +385,26 @@ size_t ProcessLexeme(const string &lexeme) {
 		tok = Token(OPEN_BRAKET, lexeme);
 	} else if (lexeme == "}") {
 		tok = Token(CLOSE_BRAKET, lexeme);
+	} else if (isDelimiter(lexeme)) {
+		tok = Token(DELIMITER, lexeme);
 	}
 
 	cout << tok.toString() << endl;
 
 	return 0;
+}
+
+string ReadString(size_t &pos, const string &str) {
+	string lexeme;
+	pos++;
+	for (; pos < str.size(); pos++) {
+		if (str[pos] == '"') {
+			break;
+		}
+		lexeme += str[pos];
+	}
+
+	return lexeme;
 }
 
 int main(int argc, char* argv[])
@@ -412,12 +416,33 @@ int main(int argc, char* argv[])
 
 	ifstream input = ifstream(argv[1]);
 
-	string codeString = ReadProgrammCodeToString(input);	
+	char buffer[BUFFER_LENGTH];	
+	//input.read(buffer, BUFFER_LENGTH);		
+	int res = input.tellg();
+	
+	string codeString = ReadProgrammCodeToString(input);
 
 	string lexeme;
 	for (size_t i = 0; i < codeString.size(); i++) {
 		char currentChar = codeString[i];
 		char nextChar = codeString[i + 1];
+
+		if (currentChar == '\'' && codeString[i + 2] == '\'') {
+			lexeme += nextChar;
+			Token tok = Token(CHAR, lexeme);
+			cout << tok.toString() << endl;
+			i += 2;
+			lexeme = "";
+			continue;
+		}
+
+		if (currentChar == '"') {
+			lexeme = ReadString(i, codeString);
+			Token tok = Token(STRING, lexeme);
+			cout << tok.toString() << endl;
+			lexeme = "";
+			continue;
+		}
 
 		if (currentChar == ' ' || currentChar == '\n') {
 			continue;
@@ -428,7 +453,8 @@ int main(int argc, char* argv[])
 			continue;
 		}
 
-		if (isdigit(currentChar) && nextChar == '.') {
+		if ((isdigit(currentChar) && nextChar == '.') 
+			|| (currentChar == '.' && isdigit(nextChar))) {
 			lexeme += currentChar;
 			lexeme += nextChar;
 			i++;
@@ -441,6 +467,15 @@ int main(int argc, char* argv[])
 			i++;
 			continue;
 		}
+
+		if (!(isdigit(currentChar) || isalpha(currentChar))
+			&& !(isdigit(nextChar) || isalpha(nextChar))) {
+			lexeme += currentChar;
+			ProcessLexeme(lexeme);
+			lexeme = "";
+			continue;
+		}
+
 
 		if (isdigit(currentChar) || isalpha(currentChar)) {
 			lexeme += currentChar;

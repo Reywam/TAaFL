@@ -186,67 +186,39 @@ void SkipLineComment(size_t &pos, const vector<char> &str) {
 			break;
 		}
 	}
-	
 }
 
 bool isIdentifier(const string &lexeme) {
-	bool result = false;
+	bool result = true;
 
-	if (isalpha(lexeme[0])) {				
-		for (size_t i = 0; i < lexeme.size(); i++) {
-			result = false;
-
-			char currenChar = lexeme[i];
-			if (isalpha(currenChar) || isdigit(currenChar)) {
-				result = true;
-			}
-			else {
+	if (isalpha(lexeme[0])) {
+		for (size_t i = 0; i < lexeme.size(); i++) {						
+			if (!(isalpha(lexeme[i]) || isdigit(lexeme[i]))) {
+				result = false;
 				break;
 			}
 		}
-	}	
+	} else {
+		result = false;
+	}
 	
 	return result;
 }
 
 bool isKeyword(const string &lexeme) {
-	bool result = false;
-
-	if (KEYWORDS.find(lexeme) != KEYWORDS.end()) {
-		result = true;
-	}
-
-	return result;
+	return KEYWORDS.find(lexeme) != KEYWORDS.end();
 }
 
 bool isCondition(const string &lexeme) {
-	bool result = false;
-
-	if (lexeme == "if" || lexeme == "else") {
-		result = true;
-	}
-
-	return result;
+	return (lexeme == "if" || lexeme == "else");
 }
 
 bool isOperator(const string &lexeme) {
-	bool result = true;
-
-	if (OPERATORS.find(lexeme) == OPERATORS.end()) {
-		result = false;
-	}
-
-	return result;
+	return OPERATORS.find(lexeme) != OPERATORS.end();
 }
 
 bool isComparator(const string &lexeme) {
-	bool result = true;
-
-	if (COMPARATORS.find(lexeme) == COMPARATORS.end()) {
-		result = false;
-	}
-
-	return result;
+	return COMPARATORS.find(lexeme) != COMPARATORS.end();
 }
 
 bool isNumber(const string &lexeme) {
@@ -266,10 +238,6 @@ bool isFixedFloat(const string &lexeme) {
 	bool result = true;
 	size_t pointPos = lexeme.find_first_of('.');
 
-	if (pointPos == 0) {
-		result = false;
-	}
-
 	for (size_t i = 0; i < pointPos; i++) {
 		if (!isdigit(lexeme[i])) {
 			result = false;
@@ -285,6 +253,7 @@ bool isFixedFloat(const string &lexeme) {
 			}
 		}
 	}
+
 	return result;
 }
 
@@ -294,11 +263,11 @@ bool isFloat(const string &lexeme) {
 	size_t pointPos = lexeme.find('.');
 	size_t expPos = lexeme.find('E');
 
-	if (pointPos >= lexeme.size() && pointPos <= 0) {
+	if (pointPos >= lexeme.size() || pointPos < 0) {
 		return false;
 	}
 
-	if (expPos >= lexeme.size() && expPos <= 0) {
+	if (expPos >= lexeme.size() || expPos <= 0) {
 		return false;;
 	}
 
@@ -335,16 +304,10 @@ bool isFloat(const string &lexeme) {
 }
 
 bool isDelimiter(const string &lexeme) {
-	bool result = false;
-
-	if(DELIMITERS.find(lexeme) != DELIMITERS.end()){
-		result = true;
-	}
-
-	return result;
+	return DELIMITERS.find(lexeme) != DELIMITERS.end();
 }
 
-size_t ProcessLexeme(const string &lexeme) {
+void ProcessLexeme(const string &lexeme) {
 
 	Token tok = Token(ERROR, lexeme);
 	if (isCondition(lexeme)) {
@@ -382,8 +345,6 @@ size_t ProcessLexeme(const string &lexeme) {
 	}
 	
 	cout << tok.toString() << endl;
-
-	return 0;
 }
 
 string ReadString(size_t &pos, const vector<char> &str) {
@@ -402,9 +363,6 @@ string ReadString(size_t &pos, const vector<char> &str) {
 void ReadDataToBuffer(ifstream &input, vector<char> &buffer, size_t bufferSize) {
 	char ch = NULL;
 	for (size_t i = 0; i < bufferSize && (int)input.tellg() != EOF; i++) {
-		if (i == 503) {
-			cout << endl;
-		}
 		ch = input.get();
 		buffer.push_back(ch);
 	}
@@ -423,7 +381,6 @@ int main(int argc, char* argv[])
 		return 1;
 	}
 
-	const int blen = 2;
 	vector<char> buffer;
 	
 	ReadDataToBuffer(input, buffer, BUFFER_LENGTH);	
@@ -445,6 +402,16 @@ int main(int argc, char* argv[])
 			continue;
 		}
 
+		if (currentChar == '/' && nextChar == '*') {
+			SkipComment(i, buffer);
+			continue;
+		}
+
+		if (currentChar == '/' && nextChar == '/') {
+			SkipLineComment(i, buffer);
+			continue;
+		}
+
 		// Проверка компараторов
 		if ((currentChar == '='
 			|| currentChar == '!'
@@ -459,7 +426,7 @@ int main(int argc, char* argv[])
 			continue;
 		}
 
-		// Проверка что это символ
+		// Проверка что это char
 		if (currentChar == '\'' && buffer[i + 2] == '\'') {
 			lexeme += nextChar;
 			Token tok = Token(CHAR, lexeme);
@@ -469,7 +436,7 @@ int main(int argc, char* argv[])
 			continue;
 		}
 
-		// Начало строки
+		// String
 		if (currentChar == '"') {
 			lexeme = ReadString(i, buffer);
 			Token tok = Token(STRING, lexeme);
@@ -477,19 +444,9 @@ int main(int argc, char* argv[])
 			lexeme = "";
 			continue;
 		}
+	
 
-		// Пропуск коммента
-		if (currentChar == '/' && nextChar == '*') {
-			SkipComment(i, buffer);
-			continue;
-		}
-
-		if (currentChar == '/' && nextChar == '/') {
-			SkipLineComment(i, buffer);
-			continue;
-		}
-
-		// Обработка float чисел
+		// Float
 		if ((isdigit(currentChar) && nextChar == '.')
 			|| (currentChar == '.' && isdigit(nextChar))) {
 			lexeme += currentChar;
@@ -516,16 +473,14 @@ int main(int argc, char* argv[])
 
 		if (isdigit(currentChar) || isalpha(currentChar)) {
 			lexeme += currentChar;
-		}
-		else if (!(isdigit(nextChar) || isalpha(nextChar))
+		} else if (!(isdigit(nextChar) || isalpha(nextChar))
 			&& IGNORED_SEPARATORS.find(nextChar) == IGNORED_SEPARATORS.end()) {
 			lexeme += currentChar;
 			lexeme += nextChar;
 			ProcessLexeme(lexeme);
 			i++;
 			lexeme = "";			
-		}
-		else {
+		} else {
 			lexeme += currentChar;
 			ProcessLexeme(lexeme);
 			lexeme = "";			

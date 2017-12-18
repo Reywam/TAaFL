@@ -10,6 +10,12 @@
 #include <stdio.h>
 #include <tchar.h>
 
+#include <iostream>
+#include <fstream>
+#include <set>
+#include <string>
+#include <vector>
+
 
 
 // TODO: Установите здесь ссылки на дополнительные заголовки, требующиеся для программы

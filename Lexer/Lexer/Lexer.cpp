@@ -1,16 +1,10 @@
 #include "stdafx.h"
-#include <iostream>
-#include <fstream>
-#include <set>
-#include <string>
-#include <regex>
-#include <vector>
 
 using namespace std;
 
 const unsigned int BUFFER_LENGTH = 1024;
 
-enum tokenTipe {
+enum tokenType {
 	ERROR
 	, IDENTIFIER
 	, CONDITION
@@ -23,8 +17,8 @@ enum tokenTipe {
 	, STRING
 	, DELIMITER
 	, OPERATOR
-	, OPEN_BRAKET
-	, CLOSE_BRAKET
+	, OPEN_BRACKET
+	, CLOSE_BRACKET
 	, CHAR
 	, BOOLEAN
 	, ARRAY_OPEN
@@ -90,11 +84,11 @@ public:
 			case OPERATOR:
 				result = "OPERATOR";
 				break;
-			case OPEN_BRAKET:
-				result = "OPEN_BRAKET";
+			case OPEN_BRACKET:
+				result = "OPEN_BRACKET";
 				break;
-			case CLOSE_BRAKET:
-				result = "CLOSE_BRAKET";
+			case CLOSE_BRACKET:
+				result = "CLOSE_BRACKET";
 				break;
 			case BOOLEAN:
 				result = "BOOLEAN";
@@ -148,17 +142,6 @@ const set<string> COMPARATORS = {
 	, "<"
 	, ">="
 	, "<="
-};
-
-const set<string> ASSIGNMENTS = {
-	"="
-};
-
-const set<string> BRAKETS = {
-	"("
-	, ")"
-	, "{"
-	, "}"
 };
 
 const set<string> DELIMITERS = {
@@ -383,17 +366,17 @@ size_t ProcessLexeme(const string &lexeme) {
 	} else if (lexeme == "=") {
 		tok = Token(ASSIGNMENT, lexeme);
 	} else if (lexeme == "(") {
-		tok = Token(OPEN_BRAKET, lexeme);
+		tok = Token(OPEN_BRACKET, lexeme);
 	} else if (lexeme == ")") {
-		tok = Token(CLOSE_BRAKET, lexeme);
+		tok = Token(CLOSE_BRACKET, lexeme);
 	} else if (lexeme == "[") {
 		tok = Token(ARRAY_OPEN, lexeme);
 	} else if (lexeme == "]") {
 		tok = Token(ARRAY_CLOSE, lexeme);
 	} else if (lexeme == "{") {
-		tok = Token(OPEN_BRAKET, lexeme);
+		tok = Token(OPEN_BRACKET, lexeme);
 	} else if (lexeme == "}") {
-		tok = Token(CLOSE_BRAKET, lexeme);
+		tok = Token(CLOSE_BRACKET, lexeme);
 	} else if (isDelimiter(lexeme)) {
 		tok = Token(DELIMITER, lexeme);
 	}

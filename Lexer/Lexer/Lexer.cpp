@@ -271,7 +271,7 @@ bool isDelimiter(const string &lexeme) {
 	return DELIMITERS.find(lexeme) != DELIMITERS.end();
 }
 
-void ProcessLexeme(const string &lexeme) {
+void ProcessLexeme(const string &lexeme, vector<string> &ids) {
 
 	Token tok = Token(ERROR, lexeme);
 	if (isCondition(lexeme)) {
@@ -280,6 +280,7 @@ void ProcessLexeme(const string &lexeme) {
 		tok = Token(KEYWORD, lexeme);
 	} else if (isIdentifier(lexeme)) {
 		tok = Token(IDENTIFIER, lexeme);
+		ids.push_back(lexeme);
 	} else if (isOperator(lexeme)) {
 		tok = Token(OPERATOR, lexeme);
 	} else if (isComparator(lexeme)) {
@@ -347,6 +348,8 @@ int main(int argc, char* argv[])
 
 	vector<char> buffer;
 	
+	vector<string> ids;
+
 	ReadDataToBuffer(input, buffer, BUFFER_LENGTH);	
 	string lexeme;
 	for (size_t i = 0; buffer[i] != 'ÿ' && buffer[i] != EOF; i++) {
@@ -430,7 +433,7 @@ int main(int argc, char* argv[])
 		if (!(isdigit(currentChar) || isalpha(currentChar))
 			&& !(isdigit(nextChar) || isalpha(nextChar))) {
 			lexeme += currentChar;
-			ProcessLexeme(lexeme);
+			ProcessLexeme(lexeme, ids);
 			lexeme = "";			
 			continue;
 		}
@@ -441,24 +444,29 @@ int main(int argc, char* argv[])
 			&& IGNORED_SEPARATORS.find(nextChar) == IGNORED_SEPARATORS.end()) {
 			lexeme += currentChar;
 			lexeme += nextChar;
-			ProcessLexeme(lexeme);
+			ProcessLexeme(lexeme, ids);
 			i++;
 			lexeme = "";			
 		} else {
 			lexeme += currentChar;
-			ProcessLexeme(lexeme);
+			ProcessLexeme(lexeme, ids);
 			lexeme = "";			
 		}
 
 		if ((isdigit(currentChar) || isalpha(currentChar))
 			&& !(isdigit(nextChar) || isalpha(nextChar))) {
-			ProcessLexeme(lexeme);
+			ProcessLexeme(lexeme, ids);
 			lexeme = "";			
 		}
 	}
 
 	if (lexeme != "") {
-		ProcessLexeme(lexeme);
+		ProcessLexeme(lexeme, ids);
+	}
+
+	cout << "IDS:" << endl;
+	for (auto &id : ids) {
+		cout << id << endl;
 	}
 
     return 0;

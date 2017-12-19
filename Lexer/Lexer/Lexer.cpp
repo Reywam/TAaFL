@@ -25,6 +25,27 @@ enum tokenType {
 	, ARRAY_CLOSE
 };
 
+const unordered_map<size_t, string> tokensNames = {
+	make_pair(ERROR, "ERROR")
+	, make_pair(IDENTIFIER, "IDENTIFIER")
+	, make_pair(CONDITION, "CONDITION")
+	, make_pair(KEYWORD, "KEYWORD")
+	, make_pair(COMPARATOR, "COMPARATOR")
+	, make_pair(ASSIGNMENT, "ASSIGNMENT")
+	, make_pair(NUMBER, "NUMBER")
+	, make_pair(FIXED_FLOAT, "FIXED_FLOAT")
+	, make_pair(FLOAT, "FLOAT")
+	, make_pair(STRING, "STRING")
+	, make_pair(DELIMITER, "DELIMITER")
+	, make_pair(OPERATOR, "OPERATOR")
+	, make_pair(OPEN_BRACKET, "OPEN_BRACKET")
+	, make_pair(CLOSE_BRACKET, "CLOSE_BRACKET")
+	, make_pair(CHAR, "CHAR")
+	, make_pair(BOOLEAN, "BOOLEAN")
+	, make_pair(ARRAY_OPEN, "ARRAY_OPEN")
+	, make_pair(ARRAY_CLOSE, "ARRAY_CLOSE")
+};
+
 class Token{
 	size_t id;
 	string lexeme;
@@ -45,65 +66,8 @@ public:
 		return lexeme;
 	}
 
-	string idToString() {
-		string result;
-		switch (id) {
-			case ERROR:
-				result = "ERROR";
-				break;
-			case IDENTIFIER:
-				result = "IDENTIFIER";
-				break;
-			case CONDITION:
-				result = "CONDITION";
-				break;
-			case KEYWORD:
-				result = "KEYWORD";
-				break;
-			case COMPARATOR:
-				result = "COMPARATOR";
-				break;
-			case ASSIGNMENT:
-				result = "ASSIGNMENT";
-				break;
-			case NUMBER:
-				result = "NUMBER";
-				break;
-			case FIXED_FLOAT:
-				result = "FIXED_FLOAT";
-				break;
-			case FLOAT:
-				result = "FLOAT";
-				break;
-			case STRING:
-				result = "STRING";
-				break;
-			case DELIMITER:
-				result = "DELIMITER";
-				break;
-			case OPERATOR:
-				result = "OPERATOR";
-				break;
-			case OPEN_BRACKET:
-				result = "OPEN_BRACKET";
-				break;
-			case CLOSE_BRACKET:
-				result = "CLOSE_BRACKET";
-				break;
-			case BOOLEAN:
-				result = "BOOLEAN";
-				break;
-			case CHAR:
-				result = "CHAR";
-				break;
-			case ARRAY_OPEN:
-				result = "ARRAY_OPEN";
-				break;
-			case ARRAY_CLOSE:
-				result = "ARRAY_CLOSE";
-				break;
-		}
-		return result;		
+	string idToString() {				
+		return tokensNames.at(id);
 	}
 
 	string toString()

@@ -70,8 +70,7 @@ public:
 		return tokensNames.at(id);
 	}
 
-	string toString()
-	{
+	string toString() {
 		return idToString() + "->" + lexeme;
 	}
 };
@@ -462,6 +461,8 @@ int main(int argc, char* argv[]) {
 	if (lexeme != "") {
 		ProcessLexeme(lexeme, ids);
 	}
+
+	/* asdasdasd*/
 
 	cout << "IDS:" << endl;
 	for (auto &id : ids) {

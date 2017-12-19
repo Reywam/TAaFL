@@ -26,27 +26,27 @@ enum tokenType {
 };
 
 const unordered_map<size_t, string> tokensNames = {
-	make_pair(ERROR, "ERROR")
-	, make_pair(IDENTIFIER, "IDENTIFIER")
-	, make_pair(CONDITION, "CONDITION")
-	, make_pair(KEYWORD, "KEYWORD")
-	, make_pair(COMPARATOR, "COMPARATOR")
-	, make_pair(ASSIGNMENT, "ASSIGNMENT")
-	, make_pair(NUMBER, "NUMBER")
-	, make_pair(FIXED_FLOAT, "FIXED_FLOAT")
-	, make_pair(FLOAT, "FLOAT")
-	, make_pair(STRING, "STRING")
-	, make_pair(DELIMITER, "DELIMITER")
-	, make_pair(OPERATOR, "OPERATOR")
-	, make_pair(OPEN_BRACKET, "OPEN_BRACKET")
-	, make_pair(CLOSE_BRACKET, "CLOSE_BRACKET")
-	, make_pair(CHAR, "CHAR")
-	, make_pair(BOOLEAN, "BOOLEAN")
-	, make_pair(ARRAY_OPEN, "ARRAY_OPEN")
-	, make_pair(ARRAY_CLOSE, "ARRAY_CLOSE")
+	{ERROR, "ERROR"}
+	, {IDENTIFIER, "IDENTIFIER"}
+	, {CONDITION, "CONDITION"}
+	, {KEYWORD, "KEYWORD"}
+	, {COMPARATOR, "COMPARATOR"}
+	, {ASSIGNMENT, "ASSIGNMENT"}
+	, {NUMBER, "NUMBER"}
+	, {FIXED_FLOAT, "FIXED_FLOAT"}
+	, {FLOAT, "FLOAT"}
+	, {STRING, "STRING"}
+	, {DELIMITER, "DELIMITER"}
+	, {OPERATOR, "OPERATOR"}
+	, {OPEN_BRACKET, "OPEN_BRACKET"}
+	, {CLOSE_BRACKET, "CLOSE_BRACKET"}
+	, {CHAR, "CHAR"}
+	, {BOOLEAN, "BOOLEAN"}
+	, {ARRAY_OPEN, "ARRAY_OPEN"}
+	, {ARRAY_CLOSE, "ARRAY_CLOSE"}
 };
 
-class Token{
+class Token {
 	size_t id;
 	string lexeme;
 public:
@@ -333,8 +333,7 @@ void ReadDataToBuffer(ifstream &input, vector<char> &buffer, size_t bufferSize) 
 	}
 }
 
-int main(int argc, char* argv[])
-{
+int main(int argc, char* argv[]) {
 	if (argc != 2) {
 		cout << "Choose input file." << endl;
 		return 1;

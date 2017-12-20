@@ -133,11 +133,12 @@ const set<char> DUMMY_CHARS = {
 	' '
 	, '\n'
 	, '\t'
+	, EOF
 };
 
 void SkipComment(size_t &pos, const vector<char> &str) {
 	for (;pos < str.size(); pos++) {
-		if (str[pos] == '/' && str[pos - 1] == '*' || (str[pos] == EOF && str[pos] != 'я')) {
+		if (pos != 0 && str[pos] == '/' && str[pos - 1] == '*' || (str[pos] == EOF && str[pos] != 'я')) {
 			break;
 		}
 	}
@@ -184,8 +185,12 @@ bool isComparator(const string &lexeme) {
 	return COMPARATORS.find(lexeme) != COMPARATORS.end();
 }
 
-bool isNumber(const string &lexeme) {
+bool isNumber(string &lexeme) {
 	bool result = true;
+	
+	while (lexeme[0] == '0') {
+		lexeme.erase(0, 1);
+	}
 
 	for (size_t i = 0; i < lexeme.size(); i++) {
 		if (!isdigit(lexeme[i])) {
@@ -270,7 +275,42 @@ bool isDelimiter(const string &lexeme) {
 	return DELIMITERS.find(lexeme) != DELIMITERS.end();
 }
 
-void ProcessLexeme(const string &lexeme, vector<string> &ids) {
+bool isCharSequence(string &lexeme) {
+	size_t start = lexeme.find_first_of("\'");
+	size_t end = lexeme.find_last_of("\'");
+
+	if (start == end) {
+		return false;
+	}
+
+	if (lexeme == "''") {
+		lexeme = "";
+	} else if (start != end) {
+		lexeme == lexeme.substr(start + 1, end - 1);
+	}
+	
+	return true;
+}
+
+bool isString(string &lexeme) {
+	size_t start = lexeme.find_first_of('\\"');
+	size_t end = lexeme.find_last_of('\\"');
+
+	if (start == end) {
+		return false;
+	}
+
+	if (lexeme == "\"\"") {
+		lexeme = "";
+	}
+	else if (start != end) {
+		lexeme == lexeme.substr(start + 1, end - 1);
+	}
+
+	return true;
+}
+
+void ProcessLexeme(string &lexeme, vector<string> &ids) {
 
 	Token tok = Token(ERROR, lexeme);
 	if (isCondition(lexeme)) {
@@ -286,8 +326,12 @@ void ProcessLexeme(const string &lexeme, vector<string> &ids) {
 		tok = Token(COMPARATOR, lexeme);
 	} else if (isNumber(lexeme)) {
 		tok = Token(NUMBER, lexeme);
+	} else if (isCharSequence(lexeme)) {
+		tok = Token(CHAR, lexeme);
+	} else if (isString(lexeme)) {
+		tok = Token(STRING, lexeme);
 	} else if (isFixedFloat(lexeme)) {
-		tok = Token(FIXED_FLOAT, lexeme);		
+		tok = Token(FIXED_FLOAT, lexeme);
 	} else if (isFloat(lexeme)) {
 		tok = Token(FLOAT, lexeme);
 	} else if (lexeme == "=") {
@@ -308,17 +352,23 @@ void ProcessLexeme(const string &lexeme, vector<string> &ids) {
 		tok = Token(DELIMITER, lexeme);
 	}
 	
-	cout << tok.toString() << endl;
+	cout << tok.toString() << endl;	
 }
 
 string ReadString(size_t &pos, const vector<char> &str) {
 	string lexeme;
+	lexeme += str[pos];
 	pos++;
+
 	for (; pos < str.size(); pos++) {
-		if (str[pos] == '"') {
+		if (str[pos] == '"' || str[pos] == EOF || str[pos] == '\t' || str[pos] == '\n') {
 			break;
 		}
 		lexeme += str[pos];
+	}
+
+	if (str[pos] == '"') {
+		lexeme += '"';
 	}
 
 	return lexeme;
@@ -330,6 +380,25 @@ void ReadDataToBuffer(ifstream &input, vector<char> &buffer, size_t bufferSize) 
 		ch = input.get();
 		buffer.push_back(ch);
 	}
+}
+
+string ReadCharSequence(size_t &pos, const vector<char> &buffer) {
+	string lexeme;
+
+	lexeme += buffer[pos];
+	pos++;
+	for (; pos < buffer.size(); pos++) {
+		if (buffer[pos] == '\'' || buffer[pos] == EOF || buffer[pos] == '\n') {
+			break;
+		}
+		lexeme += buffer[pos];
+	}
+	
+	if (buffer[pos] == '\'') {
+		lexeme += '\'';
+	}
+
+	return lexeme;
 }
 
 int main(int argc, char* argv[]) {
@@ -350,7 +419,7 @@ int main(int argc, char* argv[]) {
 
 	ReadDataToBuffer(input, buffer, BUFFER_LENGTH);	
 	string lexeme;
-	for (size_t i = 0; buffer[i] != 'я' && buffer[i] != EOF; i++) {
+	for (size_t i = 0; i < buffer.size() && buffer[i] != 'я' && buffer[i] != EOF; i++) {
 		if (i == buffer.size()) {
 			auto lastElem = buffer.back();
 			buffer.clear();			
@@ -364,6 +433,10 @@ int main(int argc, char* argv[]) {
 
 		// Проверка символов-пустышек, их игнорим
 		if (DUMMY_CHARS.find(currentChar) != DUMMY_CHARS.end()) {
+			if (lexeme != "") {
+				ProcessLexeme(lexeme, ids);
+				lexeme = "";
+			}
 			continue;
 		}
 
@@ -392,20 +465,17 @@ int main(int argc, char* argv[]) {
 		}
 
 		// Проверка что это char
-		if (currentChar == '\'' && buffer[i + 2] == '\'') {
-			lexeme += nextChar;
-			Token tok = Token(CHAR, lexeme);
-			cout << tok.toString() << endl;
-			i += 2;
-			lexeme = "";			
+		if (currentChar == '\'') {
+			lexeme = ReadCharSequence(i, buffer);
+			ProcessLexeme(lexeme, ids);			
+			lexeme = "";
 			continue;
 		}
 
 		// String
 		if (currentChar == '"') {
 			lexeme = ReadString(i, buffer);
-			Token tok = Token(STRING, lexeme);
-			cout << tok.toString() << endl;
+			ProcessLexeme(lexeme, ids);
 			lexeme = "";
 			continue;
 		}
@@ -461,8 +531,6 @@ int main(int argc, char* argv[]) {
 	if (lexeme != "") {
 		ProcessLexeme(lexeme, ids);
 	}
-
-	/* asdasdasd*/
 
 	cout << "IDS:" << endl;
 	for (auto &id : ids) {

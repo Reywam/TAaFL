@@ -1,0 +1,23 @@
+Токены:
+ERROR - токен ошибки
+
+KEYWORD - for, const, class, public, private, string, int, char, bool, float
+true, false, return
+
+NUMBER - число - 1, 0, 12 и т.д, числа типа 01231234, 0000312313... - ошибка
+IDENTIFIER - любая последовательность букв и цифр с буквы - a1 - идентификатор, 1a - error, _ не допустимы в id
+CONDITION_IF - токен для if
+CONDITION_ELSE - токен для else
+COMPARATOR - все виды сравнений - ==, !=, <=, >=, <, >
+ASSIGNMENT - присваивание - =
+FIXED_FLOAT - число вида 12.5, ??под вопросом 12. и .12??
+FLOAT - число вида 321.12E-10, экспонента = E
+STRING - последовательность чего угодно между "" - "sdasda\n - ошибка, dasdsada" - ошибка, "sdasdads - ошибка и id
+DELIMITER - разделители - '.', ',',';'
+OPERATOR - операторы - +, -, *, /, составных операторов вроде += нет
+OPEN_BRACKET - скобки ( {
+CLOSE_BRACKET - скобки ) }
+CHAR - символ между '' ??под вопросом 'asdasdasda'
+BOOLEAN - токен для true/false
+ARRAY_OPEN - скобка [
+ARRAY_CLOSE - скобка ]

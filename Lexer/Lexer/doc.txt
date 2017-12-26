@@ -1,8 +1,8 @@
 Токены:
 ERROR - токен ошибки
 
-KEYWORD - for, const, class, public, private, string, int, char, bool, float
-true, false, return
+KEYWORD - for, const, class, public, private, string, int, char, bool, float, return
+BOOLEAN - true, false
 
 NUMBER - число - 1, 0, 12 и т.д, числа типа 01231234, 0000312313... - ошибка
 IDENTIFIER - любая последовательность букв и цифр с буквы - a1 - идентификатор, 1a - error, _ не допустимы в id
@@ -15,9 +15,12 @@ FLOAT - число вида 321.12E-10, экспонента = E
 STRING - последовательность чего угодно между "" - "sdasda\n - ошибка, dasdsada" - ошибка, "sdasdads - ошибка и id
 DELIMITER - разделители - '.', ',',';'
 OPERATOR - операторы - +, -, *, /, составных операторов вроде += нет
-OPEN_BRACKET - скобки ( {
-CLOSE_BRACKET - скобки ) }
-CHAR - символ между '' ??под вопросом 'asdasdasda'
+
+OPEN|CLOSE_BRACKET - ()
+ARRAY_OPEN|CLOSE - []
+BLOCK_+OPEN|CLOSE - {}
+
+CHAR - один символ между ''
 BOOLEAN - токен для true/false
-ARRAY_OPEN - скобка [
-ARRAY_CLOSE - скобка ]
+
+Никакого экранирования типа \n нет, 

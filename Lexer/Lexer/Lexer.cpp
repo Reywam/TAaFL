@@ -14,6 +14,15 @@ const string OPEN_COMMENT = "/*";
 const string CLOSE_COMMENT = "*/";
 const string EOLN = "\n";
 
+const string ARRAY_OPEN_BRACKET = "[";
+const string ARRAY_CLOSE_BRACKET = "]";
+
+const string BLOCK_OPEN_BRACKET = "{";
+const string BLOCK_CLOSE_BRACKET = "}";
+
+const string SIMPLE_OPEN_BRACKET = "(";
+const string SIMPLE_CLOSE_BRACKET = ")";
+
 enum tokenType {
 	ERROR
 	, KEYWORD
@@ -28,12 +37,14 @@ enum tokenType {
 	, STRING
 	, DELIMITER
 	, OPERATOR
-	, OPEN_BRACKET
-	, CLOSE_BRACKET
 	, CHAR
 	, BOOLEAN
 	, ARRAY_OPEN
 	, ARRAY_CLOSE
+	, BLOCK_OPEN
+	, BLOCK_CLOSE
+	, OPEN_BRACKET
+	, CLOSE_BRACKET
 };
 
 const unordered_map<size_t, string> tokensNames = {
@@ -56,6 +67,8 @@ const unordered_map<size_t, string> tokensNames = {
 	, {BOOLEAN, "BOOLEAN"}
 	, {ARRAY_OPEN, "ARRAY_OPEN"}
 	, {ARRAY_CLOSE, "ARRAY_CLOSE"}
+	, {BLOCK_OPEN, "BLOCK_OPEN"}
+	, {BLOCK_CLOSE, "BLOCK_CLOSE"}	
 };
 
 class Token {
@@ -98,9 +111,12 @@ const set<string> KEYWORDS = {
 	, "char"
 	, "bool"
 	, "float"
-	, "true"
-	, "false"
 	, "return"
+};
+
+const set<string> BOOLEANS = {
+	"true"
+	, "false"
 };
 
 const set<string> OPERATORS = {
@@ -119,22 +135,10 @@ const set<string> COMPARATORS = {
 	, "<="
 };
 
-const set<char> CHAR_DELIMITERS = {
-	','
-	, ' '
-	, '.'
-	, ';'
-	, '\n'
-	, '(', ')'
-	, '[', ']'
-	, '{', '}'
-	, '+', '-', '*', '/'
-	, '='
-	, '<', '>'
-	, '"'
-	, '\''
-	, '!'
-	, '\\'
+const set<string> LEX_DELIMITERS = {
+	"."
+	, ","
+	, ";"
 };
 
 const set<char> DUMMY_CHARS = {
@@ -160,10 +164,14 @@ void SkipLineComment(size_t &pos, const vector<char> &str) {
 	}
 }
 
+bool isBoolean(const string &lexeme) {
+	return BOOLEANS.find(lexeme) != BOOLEANS.end();
+}
+
 bool isIdentifier(const string &lexeme) {
 	bool result = true;
 
-	if (isalpha(lexeme[0])) {
+	if (isalpha(lexeme[0]) && lexeme.size() <= MAX_ID_SIZE) {
 		for (size_t i = 0; i < lexeme.size(); i++) {
 			if (!(isalpha(lexeme[i]) || isdigit(lexeme[i]))) {
 				result = false;
@@ -295,8 +303,7 @@ bool isFloat(const string &lexeme) {
 }
 
 bool isDelimiter(const string &lexeme) {
-	return CHAR_DELIMITERS.find(lexeme[0]) != CHAR_DELIMITERS.end();
-	return true;
+	return LEX_DELIMITERS.find(lexeme) != LEX_DELIMITERS.end();
 }
 
 bool isCharSequence(string &lexeme) {
@@ -401,7 +408,7 @@ string ReadLexeme(vector<char> &buffer, size_t &i) {
 					nextChar = buffer[i + 1];
 			}
 
-		if (CHAR_DELIMITERS.find(currentChar) != CHAR_DELIMITERS.end() && lexeme.empty()) {
+		if ((!isdigit(currentChar) && !isalpha(currentChar)) && lexeme.empty()) {
 			lexeme += currentChar;
 			i++;
 			break;
@@ -599,26 +606,23 @@ bool tryToMakeDoubleComparator(string &lex, const vector<string> &lexemes, size_
 	return result;
 }
 
-
-// TODO закончить работу со строками, пока работают некорректно
 bool tryToMakeString(string &lex, const vector<string> &lexemes, size_t &pos) {
 	//„итать от кавычки до кавычки или конца строки
 	bool result = false;
 	string startLex = lex;
-	size_t i = 0;
 	string stringLex;
+	size_t startPos = pos;
 	try {
 		if (lex != "\"") {
 			throw exception();
-		} 
+		}
 		pos++;
 		stringLex += lex;
-		// ≈сли при чтении строки мы дошли до \n, но не дошли до " - вс€ полученна€ строка = ошибка
-		for (; i < lexemes.size()
-			&& pos < lexemes.size()
+
+		for (; pos < lexemes.size()
 			&& lexemes[pos] != EOLN
 			&& lexemes[pos] != "\""
-			; i++, pos++) {
+			; pos++) {
 			lex = lexemes[pos];
 			stringLex += lex;
 		}
@@ -627,18 +631,53 @@ bool tryToMakeString(string &lex, const vector<string> &lexemes, size_t &pos) {
 			lex = lexemes[pos];
 			stringLex += lex;
 		}
-		
-		if (isString(stringLex) && stringLex.size() <= MAX_STRING_SIZE) {
+
+		if (!isString(stringLex) && (lex == EOLN || pos >= lexemes.size())) {
 			lex = stringLex;
-			result = true;			
+			throw stringLex;
+		}
+
+		if ((stringLex == "" || isString(stringLex)) && stringLex.size() <= MAX_STRING_SIZE) {
+			lex = stringLex;
+			result = true;
 		}
 		else {
 			throw exception();
 		}
 	}
+	catch (const string &ex) {
+		pos = startPos;
+	}
 	catch (const exception &ex) {
 		lex = startLex;
-		pos -= i;
+		pos = startPos;
+	}
+
+	return result;
+}
+
+bool isBraket(const string &lex, Token &tok) {
+	bool result = true;
+	if (lex == SIMPLE_OPEN_BRACKET) {
+		tok = Token(OPEN_BRACKET, lex);
+	}
+	else if (lex == SIMPLE_CLOSE_BRACKET) {
+		tok = Token(CLOSE_BRACKET, lex);
+	}
+	else if (lex == BLOCK_OPEN_BRACKET) {
+		tok = Token(BLOCK_OPEN, lex);
+	}
+	else if (lex == BLOCK_CLOSE_BRACKET) {
+		tok = Token(BLOCK_CLOSE, lex);
+	}
+	else if (lex == ARRAY_OPEN_BRACKET) {
+		tok = Token(ARRAY_OPEN, lex);
+	}
+	else if (lex == ARRAY_CLOSE_BRACKET) {
+		tok = Token(ARRAY_CLOSE, lex);
+	}
+	else {
+		result = false;
 	}
 
 	return result;
@@ -663,6 +702,9 @@ Token CalculateToken(string &lex, const vector<string> &lexemes, size_t &pos) {
 	else if (isKeyword(lex)) {
 		tok = Token(KEYWORD, lex);
 	}
+	else if (isBoolean(lex)) {
+		tok = Token(BOOLEAN, lex);
+	}
 	else if (isIfCondition(lex)) {
 		tok = Token(CONDITION_IF, lex);
 	}
@@ -684,13 +726,19 @@ Token CalculateToken(string &lex, const vector<string> &lexemes, size_t &pos) {
 	else if (isAssignment(lex)) {
 		tok = Token(ASSIGNMENT, lex);
 	}
+	else if (isDelimiter(lex)) {
+		tok = Token(DELIMITER, lex);
+	}
+	else {
+		isBraket(lex, tok);
+	}
 
 	return tok;
 }
 
 void SkipComments(string &currLex, const vector<string> &lexemes, size_t &i) {
 	if (tryToMakeOneLineComment(currLex, lexemes, i)) {
-		while (currLex != EOLN && i < lexemes.size() - 1) {
+		while (currLex != EOLN && i <= lexemes.size() - 1) {
 			SkipLexeme(currLex, lexemes, i);
 		}
 		if (i < lexemes.size() - 1)

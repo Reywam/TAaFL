@@ -1,2 +1,11 @@
 string str = he/**/""//dfrf/*dfgd)*/
 strub str = /*jsajd/
+
+1.5E+12
+1.5E-12
+.5E-1
+.3E+2
+123.E+1
+123.E-1
+5E+10
+3E-1

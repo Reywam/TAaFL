@@ -14,6 +14,10 @@ const string OPEN_COMMENT = "/*";
 const string CLOSE_COMMENT = "*/";
 const string EOLN = "\n";
 
+const string AND_STATEMENT = "and";
+const string OR_STATEMENT = "or";
+const string NOT_STATEMENT = "not";
+
 const string ARRAY_OPEN_BRACKET = "[";
 const string ARRAY_CLOSE_BRACKET = "]";
 
@@ -45,6 +49,7 @@ enum tokenType {
 	, BLOCK_CLOSE
 	, OPEN_BRACKET
 	, CLOSE_BRACKET
+	, LOGICAL_STATEMENT
 };
 
 const unordered_map<size_t, string> tokensNames = {
@@ -68,7 +73,8 @@ const unordered_map<size_t, string> tokensNames = {
 	, {ARRAY_OPEN, "ARRAY_OPEN"}
 	, {ARRAY_CLOSE, "ARRAY_CLOSE"}
 	, {BLOCK_OPEN, "BLOCK_OPEN"}
-	, {BLOCK_CLOSE, "BLOCK_CLOSE"}	
+	, {BLOCK_CLOSE, "BLOCK_CLOSE"}
+	, {LOGICAL_STATEMENT, "LOGICAL_STATEMENT"}
 };
 
 class Token {
@@ -147,22 +153,6 @@ const set<char> DUMMY_CHARS = {
 	, '\t'
 	, EOF
 };
-
-void SkipComment(size_t &pos, const vector<char> &str) {
-	for (; pos < str.size(); pos++) {
-		if (pos != 0 && str[pos] == '/' && str[pos - 1] == '*' || (str[pos] == EOF && str[pos] != 'я')) {
-			break;
-		}
-	}
-}
-
-void SkipLineComment(size_t &pos, const vector<char> &str) {
-	for (; pos < str.size(); pos++) {
-		if (str[pos] == '\n' || (str[pos] == EOF && str[pos] != 'я')) {
-			break;
-		}
-	}
-}
 
 bool isBoolean(const string &lexeme) {
 	return BOOLEANS.find(lexeme) != BOOLEANS.end();
@@ -424,6 +414,73 @@ string ReadLexeme(vector<char> &buffer, size_t &i) {
 	return lexeme;
 }
 
+bool isPointlessFloat(const string &lexeme) {
+	bool result = true;
+	
+	size_t expPos = lexeme.find('E');
+
+	if (expPos >= lexeme.size() || expPos <= 0) {
+		return false;
+	}
+
+	if (result) {
+		for (size_t i = 0; i < expPos, i < lexeme.size(); i++) {
+			if (!isdigit(lexeme[i])) {
+				result = false;
+				break;
+			}
+		}
+	}
+
+	if (result) {
+		if (!(lexeme[expPos + 1] == '-' || lexeme[expPos + 1] == '+')) {
+			return false;
+		}
+
+		for (size_t i = expPos + 2; expPos + 2 < lexeme.size(), i < lexeme.size(); i++) {
+			if (!isdigit(lexeme[i])) {
+				result = false;
+				break;
+			}
+		}
+	}
+
+	return result;
+}
+
+bool tryToMakeFloatWithoutPoint(string &lex, const vector<string> &lexemes, size_t &pos) {
+	bool result = false;
+	string startLex = lex;
+	size_t i = 0;
+	size_t movesCount = 4;
+	string floatLex;
+	try {
+		for (; i < movesCount && i < lexemes.size() && pos < lexemes.size(); i++) {
+			lex = lexemes[pos];
+			if (DUMMY_CHARS.find(lex[0]) != DUMMY_CHARS.end()) {
+				break;
+			}
+			floatLex += lex;
+			pos++;
+		}
+
+		if (isPointlessFloat(floatLex)) {
+			lex = floatLex;
+			result = true;
+			pos--;
+		}
+		else {
+			throw exception();
+		}
+	}
+	catch (const exception &ex) {
+		lex = startLex;
+		pos -= i;
+	}
+
+	return result;
+}
+
 bool tryToMakeFloat(string &lex, const vector<string> &lexemes, size_t &pos) {
 	bool result = false;
 	string startLex = lex;
@@ -433,6 +490,9 @@ bool tryToMakeFloat(string &lex, const vector<string> &lexemes, size_t &pos) {
 	try {
 		for (; i < movesCount && i < lexemes.size() && pos < lexemes.size(); i++) {
 			lex = lexemes[pos];
+			if (DUMMY_CHARS.find(lex[0]) != DUMMY_CHARS.end()) {
+				break;
+			}
 			floatLex += lex;
 			pos++;
 		}
@@ -453,12 +513,41 @@ bool tryToMakeFloat(string &lex, const vector<string> &lexemes, size_t &pos) {
 	return result;
 }
 
+bool tryToMakeFixedFloatWithoutZero(string &lex, const vector<string> &lexemes, size_t &pos) {	
+	bool result = false;
+	string startLex = lex;
+	size_t i = 0;
+	size_t movesCount = 2;
+	string fixedFloatLeftLex;
+	try {
+		for (; i < movesCount && i < lexemes.size() && pos < lexemes.size(); i++) {
+			lex = lexemes[pos];
+			fixedFloatLeftLex += lex;
+			pos++;
+		}
+		if (isFixedFloat(fixedFloatLeftLex)) {
+			lex = fixedFloatLeftLex;
+			result = true;
+			pos--;
+		}
+		else {
+			throw exception();
+		}
+	}
+	catch (const exception &ex) {
+		lex = startLex;
+		pos -= i;
+	}
+
+	return result;
+}
+
 bool tryToMakeFixedFloat(string &lex, const vector<string> &lexemes, size_t &pos) {
 	bool result = false;
 	string startLex = lex;
 	size_t i = 0;
 	size_t movesCount = 3;
-	string fixedFloatLex;
+	string fixedFloatLex;	
 	try {
 		for (; i < movesCount && i < lexemes.size() && pos < lexemes.size(); i++) {
 			lex = lexemes[pos];
@@ -548,8 +637,8 @@ bool tryToMakeComment(string &lex, const vector<string> &lexemes, size_t &pos) {
 }
 
 void SkipLexeme(string &lex, const vector<string> &lexemes, size_t &pos) {
-	lex = lexemes[pos];
 	pos++;
+	lex = lexemes[pos];	
 }
 
 bool tryToMakeCloseComment(string &lex, const vector<string> &lexemes, size_t &pos) {
@@ -683,6 +772,10 @@ bool isBraket(const string &lex, Token &tok) {
 	return result;
 }
 
+bool isLogicalStatement(const string &lex) {
+	return lex == AND_STATEMENT || lex == OR_STATEMENT || lex == NOT_STATEMENT;
+}
+
 Token CalculateToken(string &lex, const vector<string> &lexemes, size_t &pos) {
 	Token tok = Token(ERROR, lex);
 	// От частного к общему
@@ -693,9 +786,15 @@ Token CalculateToken(string &lex, const vector<string> &lexemes, size_t &pos) {
 	else if (tryToMakeFloat(lex, lexemes, pos)) {
 		tok = Token(FLOAT, lex);
 	}
+	else if (tryToMakeFloatWithoutPoint(lex, lexemes, pos)) {
+		tok = Token(FLOAT, lex);
+	}
 	else if (tryToMakeFixedFloat(lex, lexemes, pos)) {
 		tok = Token(FIXED_FLOAT, lex);
 	}
+	else if (tryToMakeFixedFloatWithoutZero(lex, lexemes, pos)) {
+		tok = Token(FIXED_FLOAT, lex);
+	}	
 	else if (isNumber(lex)) {
 		tok = Token(NUMBER, lex);
 	}
@@ -710,6 +809,9 @@ Token CalculateToken(string &lex, const vector<string> &lexemes, size_t &pos) {
 	}
 	else if (isElseCondition(lex)) {
 		tok = Token(CONDITION_ELSE, lex);
+	}
+	else if (isLogicalStatement(lex)) {
+		tok = Token(LOGICAL_STATEMENT, lex);
 	}
 	else if (isIdentifier(lex)) {
 		tok = Token(IDENTIFIER, lex);
@@ -736,33 +838,38 @@ Token CalculateToken(string &lex, const vector<string> &lexemes, size_t &pos) {
 	return tok;
 }
 
-void SkipComments(string &currLex, const vector<string> &lexemes, size_t &i) {
-	if (tryToMakeOneLineComment(currLex, lexemes, i)) {
-		while (currLex != EOLN && i <= lexemes.size() - 1) {
-			SkipLexeme(currLex, lexemes, i);
-		}
-		if (i < lexemes.size() - 1)
-			currLex = lexemes[i];
-	}
 
-	if (tryToMakeComment(currLex, lexemes, i)) {
-		while (!tryToMakeCloseComment(currLex, lexemes, i) && i < lexemes.size() - 1) {
-			SkipLexeme(currLex, lexemes, i);
-		}
-		if (i < lexemes.size() - 1)
-			currLex = lexemes[i];
+void SkipComment(string &currLex, size_t &i, const vector<string> &lexemes) {	
+	while (!tryToMakeCloseComment(currLex, lexemes, i) && i < lexemes.size() - 1) {
+		SkipLexeme(currLex, lexemes, i);
 	}
+	if (i <= lexemes.size() - 1)		
+		i--;
+}
+
+void SkipLineComment(string &currLex, size_t &i, const vector<string> &lexemes) {
+	while (currLex != EOLN && i <= lexemes.size() - 1) {
+		SkipLexeme(currLex, lexemes, i);
+	}
+	if (i <= lexemes.size() - 1)
+		currLex = lexemes[i];
 }
 
 void ProcessLexemesList(const vector<string> &lexemes) {
 	for (size_t i = 0; i < lexemes.size(); i++) {
 		string currLex = lexemes[i];
+		
+		if (tryToMakeOneLineComment(currLex, lexemes, i)) {			
+			SkipLineComment(currLex, i, lexemes);
+			continue;
+		}
 
-		SkipComments(currLex, lexemes, i);
-
+		if (tryToMakeComment(currLex, lexemes, i)) {
+			SkipComment(currLex, i, lexemes);
+			continue;
+		}
 		if (currLex != " " && currLex != EOLN && (i < lexemes.size())) // TODO Заменить на поиск по множеству
-		{
-			SkipComments(currLex, lexemes, i);
+		{			
 			Token tok = CalculateToken(currLex, lexemes, i);
 			cout << tok.toString() << endl;
 		}

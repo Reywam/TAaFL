@@ -1,2 +1,1 @@
-int a = b;
-kek.lol,t1!t2/t3\t4|t5*t6-T7
+-E+10

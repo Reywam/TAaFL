@@ -154,6 +154,12 @@ const set<char> DUMMY_CHARS = {
 	, EOF
 };
 
+const set<string> DUMMY_LEX = {
+	" "
+	, "\n"
+	, "\t"	
+};
+
 bool isBoolean(const string &lexeme) {
 	return BOOLEANS.find(lexeme) != BOOLEANS.end();
 }
@@ -391,12 +397,13 @@ string ReadLexeme(vector<char> &buffer, size_t &i) {
 			nextChar = buffer[i + 1];
 		}
 		// »гнорить табы и переносы строк, но учитывать переносы в однострочных комментах
-		if (DUMMY_CHARS.find(currentChar) != DUMMY_CHARS.end())
+		// TODO под вопросом игнор разделителей
+		/*if (DUMMY_CHARS.find(currentChar) != DUMMY_CHARS.end())
 			while (DUMMY_CHARS.find(nextChar) != DUMMY_CHARS.end() && i < buffer.size() - 1) {
 				i++;
 				if (i < buffer.size() - 1)
 					nextChar = buffer[i + 1];
-			}
+			}*/
 
 		if ((!isdigit(currentChar) && !isalpha(currentChar)) && lexeme.empty()) {
 			lexeme += currentChar;
@@ -888,7 +895,8 @@ void SkipComment(string &currLex, size_t &i, const vector<string> &lexemes) {
 	while (!tryToMakeCloseComment(currLex, lexemes, i) && i < lexemes.size() - 1) {
 		SkipLexeme(currLex, lexemes, i);
 	}
-	if (i <= lexemes.size() - 1)		
+	//if (i <= lexemes.size() - 1)		
+	if (i < lexemes.size() - 1)
 		i--;
 }
 
@@ -896,7 +904,7 @@ void SkipLineComment(string &currLex, size_t &i, const vector<string> &lexemes) 
 	while (currLex != EOLN && i <= lexemes.size() - 1) {
 		SkipLexeme(currLex, lexemes, i);
 	}
-	if (i <= lexemes.size() - 1)
+	if (i < lexemes.size() - 1)
 		currLex = lexemes[i];
 }
 
@@ -912,8 +920,8 @@ void ProcessLexemesList(const vector<string> &lexemes) {
 		if (tryToMakeComment(currLex, lexemes, i)) {
 			SkipComment(currLex, i, lexemes);
 			continue;
-		}
-		if (currLex != " " && currLex != EOLN && (i < lexemes.size())) // TODO «аменить на поиск по множеству
+		}		
+		if (DUMMY_LEX.find(currLex) == DUMMY_LEX.end() && (i < lexemes.size()))
 		{			
 			Token tok = CalculateToken(currLex, lexemes, i);
 			cout << tok.toString() << endl;

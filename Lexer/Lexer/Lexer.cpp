@@ -209,7 +209,7 @@ bool isNumber(const string &lexeme) {
 		i++;
 	}
 
-	if (zerosCount != 0) {
+	if (zerosCount != 0 || lexeme.size() == 0) {
 		return false;
 	}
 
@@ -314,26 +314,19 @@ bool isCharSequence(string &lexeme) {
 		lexeme = "";
 	}
 	else if (start != end) {
-		lexeme == lexeme.substr(start + 1, end - 1);
+		lexeme = lexeme.substr(start + 1, end - 1);
 	}
 
 	return true;
 }
 
-bool isString(string &lexeme) {
+bool isString(const string &lexeme) {
 	size_t start = lexeme.find_first_of('\\"');
 	size_t end = lexeme.find_last_of('\\"');
 
 	if (start == end) {
 		return false;
-	}
-
-	if (lexeme == "\"\"") {
-		lexeme = "";
-	}
-	else if (start != end) {
-		lexeme == lexeme.substr(start + 1, end - 1);
-	}
+	}	
 
 	return true;
 }
@@ -645,7 +638,12 @@ bool tryToMakeComment(string &lex, const vector<string> &lexemes, size_t &pos) {
 
 void SkipLexeme(string &lex, const vector<string> &lexemes, size_t &pos) {
 	pos++;
-	lex = lexemes[pos];	
+	if (pos < lexemes.size()) {
+		lex = lexemes[pos];
+	} 
+	else {
+		pos--;
+	}
 }
 
 bool tryToMakeCloseComment(string &lex, const vector<string> &lexemes, size_t &pos) {
@@ -702,6 +700,17 @@ bool tryToMakeDoubleComparator(string &lex, const vector<string> &lexemes, size_
 	return result;
 }
 
+string GetStringFromLex(const string &lex) {
+	string str;
+	if (lex == "\"\"") {
+		str = "";
+	}	
+	else {
+		str = lex.substr(1, lex.size() - 2);
+	}
+	return str;
+}
+
 bool tryToMakeString(string &lex, const vector<string> &lexemes, size_t &pos) {
 	//Читать от кавычки до кавычки или конца строки
 	bool result = false;
@@ -733,8 +742,8 @@ bool tryToMakeString(string &lex, const vector<string> &lexemes, size_t &pos) {
 			throw stringLex;
 		}
 
-		if ((stringLex == "" || isString(stringLex)) && stringLex.size() <= MAX_STRING_SIZE) {
-			lex = stringLex;
+		if ((stringLex == "" || isString(stringLex)) && GetStringFromLex(stringLex).size() <= MAX_STRING_SIZE) {
+			lex = lex = GetStringFromLex(stringLex);
 			result = true;
 		}
 		else {
@@ -894,14 +903,13 @@ Token CalculateToken(string &lex, const vector<string> &lexemes, size_t &pos) {
 void SkipComment(string &currLex, size_t &i, const vector<string> &lexemes) {	
 	while (!tryToMakeCloseComment(currLex, lexemes, i) && i < lexemes.size() - 1) {
 		SkipLexeme(currLex, lexemes, i);
-	}
-	//if (i <= lexemes.size() - 1)		
+	}	
 	if (i < lexemes.size() - 1)
 		i--;
 }
 
 void SkipLineComment(string &currLex, size_t &i, const vector<string> &lexemes) {
-	while (currLex != EOLN && i <= lexemes.size() - 1) {
+	while (currLex != EOLN && i < lexemes.size() - 1) {
 		SkipLexeme(currLex, lexemes, i);
 	}
 	if (i < lexemes.size() - 1)
@@ -926,7 +934,7 @@ void ProcessLexemesList(const vector<string> &lexemes) {
 			Token tok = CalculateToken(currLex, lexemes, i);
 			cout << tok.toString() << endl;
 		}
-	}
+	}	
 }
 
 int main(int argc, char* argv[]) {
@@ -944,15 +952,16 @@ int main(int argc, char* argv[]) {
 	vector<char> buffer;
 	vector<string> lexemes;
 
-	ReadDataToBuffer(input, buffer, BUFFER_LENGTH);
+	ReadDataToBuffer(input, buffer, 5);
 	string lexeme;
+	
 	for (size_t i = 0; i < buffer.size() && buffer[i] != EOF;) {
 		if (i == buffer.size()) {
 			auto lastElem = buffer.back();
 			buffer.clear();
 			buffer.push_back(lastElem);
 			i = 0;
-			ReadDataToBuffer(input, buffer, BUFFER_LENGTH);
+			ReadDataToBuffer(input, buffer, 5);
 		}
 
 		lexeme = ReadLexeme(buffer, i);
@@ -960,6 +969,7 @@ int main(int argc, char* argv[]) {
 	}
 
 	ProcessLexemesList(lexemes);
+	lexemes.clear();
 
 	return 0;
 }

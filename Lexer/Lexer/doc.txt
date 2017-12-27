@@ -20,7 +20,7 @@ OPEN|CLOSE_BRACKET - ()
 ARRAY_OPEN|CLOSE - []
 BLOCK_+OPEN|CLOSE - {}
 
-CHAR - один символ между ''
+CHAR - один символ между '', 'a' - ok, 'asd' - err, '' - err
 BOOLEAN - токен для true/false
 LOCGICAL_STATEMENT - and|or|not - ну думаю тут всё ясно, это вместо && || !
 

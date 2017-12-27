@@ -776,12 +776,57 @@ bool isLogicalStatement(const string &lex) {
 	return lex == AND_STATEMENT || lex == OR_STATEMENT || lex == NOT_STATEMENT;
 }
 
+bool isChar(string &lex) {
+	bool result = false;
+
+	if (lex.size() == 3 && lex[0] == '\'' && lex[2] == '\'') {
+		lex = lex[1];
+		result = true;
+	}
+
+	return result;
+}
+
+bool tryToMakeChar(string &lex, const vector<string> &lexemes, size_t &pos) {
+	bool result = false;
+	string startLex = lex;
+	size_t i = 0;
+	size_t movesCount = 3;
+	string charLex;
+	try {
+		for (; i < movesCount && i < lexemes.size() && pos < lexemes.size(); i++, pos++) {
+			lex = lexemes[pos];
+			if (DUMMY_CHARS.find(lex[0]) != DUMMY_CHARS.end()) {
+				break;
+			}
+			charLex += lex;
+		}
+		if (isChar(charLex)) {
+			lex = charLex;
+			result = true;
+			pos--;
+		}
+		else {
+			throw exception();
+		}
+	}
+	catch (const exception &ex) {
+		lex = startLex;
+		pos -= i;
+	}
+
+	return result;
+}
+
 Token CalculateToken(string &lex, const vector<string> &lexemes, size_t &pos) {
 	Token tok = Token(ERROR, lex);
 	// От частного к общему
 
 	if (tryToMakeString(lex, lexemes, pos)) {
 		tok = Token(STRING, lex);
+	}
+	else if (tryToMakeChar(lex, lexemes, pos)) {
+		tok = Token(CHAR, lex);
 	}
 	else if (tryToMakeFloat(lex, lexemes, pos)) {
 		tok = Token(FLOAT, lex);

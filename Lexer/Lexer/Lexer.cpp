@@ -2,7 +2,6 @@
 
 using namespace std;
 
-const unsigned int BUFFER_LENGTH = 1024;
 const unsigned int MAX_STRING_SIZE = 255;
 const unsigned int MAX_ID_SIZE = 255;
 
@@ -199,6 +198,10 @@ bool isNumber(const string &lexeme) {
 
 	size_t zerosCount = 0;
 
+	if (lexeme == "") {
+		return true;
+	}
+
 	if (lexeme == "0") {
 		return true;
 	}
@@ -228,20 +231,49 @@ bool isFixedFloat(const string &lexeme) {
 	size_t pointPos = lexeme.find_first_of('.');
 
 	if (lexeme == ".") {
-		result = false;
+		return false;
 	}
 
-	if (result) {
-		for (size_t i = 0; i < pointPos; i++) {
-			if (!isdigit(lexeme[i])) {
-				result = false;
-				break;
-			}
+	if (pointPos < 0 || pointPos >= lexeme.size()) {
+		return false;
+	}
+
+	string beforePointPart;	
+
+	for (size_t i = 0; i < pointPos; i++) {
+		beforePointPart += lexeme[i];
+	}
+
+	for (size_t i = pointPos + 1; i < lexeme.size(); i++) {
+		if (!isdigit(lexeme[i])) {
+			result = false;
+			break;
 		}
 	}
 
+	if (isNumber(beforePointPart) && result) {
+		result = true;
+	}
+	else {
+		result = false;
+	}
+
+	return result;
+}
+
+bool isExpFloat(const string &lexeme) {
+	bool result = true;
+
+	if (lexeme[0] != 'E') {
+		return false;
+	}
+
 	if (result) {
-		for (size_t i = pointPos + 1; i < lexeme.size(); i++) {
+		if (!(lexeme[1] == '-' || lexeme[1] == '+')) {
+			return false;
+		}
+
+		for (size_t i = 2; i < lexeme.size(); i++) {
 			if (!isdigit(lexeme[i])) {
 				result = false;
 				break;
@@ -302,24 +334,6 @@ bool isDelimiter(const string &lexeme) {
 	return LEX_DELIMITERS.find(lexeme) != LEX_DELIMITERS.end();
 }
 
-bool isCharSequence(string &lexeme) {
-	size_t start = lexeme.find_first_of("\'");
-	size_t end = lexeme.find_last_of("\'");
-
-	if (start == end) {
-		return false;
-	}
-
-	if (lexeme == "''") {
-		lexeme = "";
-	}
-	else if (start != end) {
-		lexeme = lexeme.substr(start + 1, end - 1);
-	}
-
-	return true;
-}
-
 bool isString(const string &lexeme) {
 	size_t start = lexeme.find_first_of('\\"');
 	size_t end = lexeme.find_last_of('\\"');
@@ -378,6 +392,35 @@ string ReadCharSequence(size_t &pos, const vector<char> &buffer) {
 	return lexeme;
 }
 
+string ReadLexeme(ifstream &input) {
+	char currentChar;
+	string lexeme;
+
+	while (!input.eof()) {
+
+		currentChar = input.get();
+		if (input.eof()) {			
+			break;
+		}
+
+		if ((currentChar != '.' && !isdigit(currentChar) && !isalpha(currentChar)) && lexeme.empty()) {
+		//if ((!isdigit(currentChar) && !isalpha(currentChar)) && lexeme.empty()) {
+			lexeme += currentChar;
+			break;
+		}
+
+		if (!input.eof() && (!isdigit(currentChar) && !isalpha(currentChar)) && currentChar != '.') {
+		//if (!input.eof() && (!isdigit(currentChar) && !isalpha(currentChar))) {
+			input.unget();
+			break;
+		}
+		else {
+			lexeme += currentChar;
+		}
+	}
+	return lexeme;
+}
+
 string ReadLexeme(vector<char> &buffer, size_t &i) {
 	string lexeme;
 
@@ -386,17 +429,6 @@ string ReadLexeme(vector<char> &buffer, size_t &i) {
 
 	for (; i < buffer.size(); i++) {
 		currentChar = buffer[i];
-		if (i < buffer.size() - 1) {
-			nextChar = buffer[i + 1];
-		}
-		// Игнорить табы и переносы строк, но учитывать переносы в однострочных комментах
-		// TODO под вопросом игнор разделителей
-		/*if (DUMMY_CHARS.find(currentChar) != DUMMY_CHARS.end())
-			while (DUMMY_CHARS.find(nextChar) != DUMMY_CHARS.end() && i < buffer.size() - 1) {
-				i++;
-				if (i < buffer.size() - 1)
-					nextChar = buffer[i + 1];
-			}*/
 
 		if ((!isdigit(currentChar) && !isalpha(currentChar)) && lexeme.empty()) {
 			lexeme += currentChar;
@@ -485,7 +517,7 @@ bool tryToMakeFloat(string &lex, const vector<string> &lexemes, size_t &pos) {
 	bool result = false;
 	string startLex = lex;
 	size_t i = 0;
-	size_t movesCount = 5;
+	size_t movesCount = 3;
 	string floatLex;
 	try {
 		for (; i < movesCount && i < lexemes.size() && pos < lexemes.size(); i++) {
@@ -496,7 +528,7 @@ bool tryToMakeFloat(string &lex, const vector<string> &lexemes, size_t &pos) {
 			floatLex += lex;
 			pos++;
 		}
-		if (isFloat(floatLex)) {
+		if (isFloat(floatLex) || isExpFloat(floatLex)) {
 			lex = floatLex;
 			result = true;
 			pos--;
@@ -508,8 +540,7 @@ bool tryToMakeFloat(string &lex, const vector<string> &lexemes, size_t &pos) {
 	catch (const exception &ex) {
 		lex = startLex;
 		pos -= i;
-	}
-
+	}	
 	return result;
 }
 
@@ -811,8 +842,8 @@ bool tryToMakeChar(string &lex, const vector<string> &lexemes, size_t &pos) {
 	string charLex;
 	try {
 		for (; i < movesCount && i < lexemes.size() && pos < lexemes.size(); i++, pos++) {
-			lex = lexemes[pos];
-			if (DUMMY_CHARS.find(lex[0]) != DUMMY_CHARS.end()) {
+			lex = lexemes[pos];			
+			if (lex != " " && DUMMY_CHARS.find(lex[0]) != DUMMY_CHARS.end()) {
 				break;
 			}
 			charLex += lex;
@@ -834,9 +865,52 @@ bool tryToMakeChar(string &lex, const vector<string> &lexemes, size_t &pos) {
 	return result;
 }
 
+bool isCharSequence(const string &lex) {
+	bool result = true;
+	for (char ch : lex) {
+		if (!isalpha(ch)) {
+			result = false;
+			break;
+		}
+	}
+	return result;
+}
+
+string CalculateFullLexInList(const vector<string> &lexemes, size_t &i) {
+	string fullLex;
+	string currentLex;
+	for (; i < lexemes.size(); i++) {
+		currentLex = lexemes[i];
+
+		if (!isNumber(currentLex) 
+			&& !isCharSequence(currentLex)
+			&& lexemes.empty()
+			&& currentLex != ".") {
+			i--;
+			break;
+		}
+
+		if ((!isNumber(currentLex) && !isCharSequence(currentLex)) && currentLex != ".") {
+			i--;
+			break;
+		}
+		else {
+			fullLex += currentLex;
+		}
+	}
+
+	if (fullLex == "") {
+		fullLex = currentLex;
+	}
+
+	return fullLex;
+}
+
 Token CalculateToken(string &lex, const vector<string> &lexemes, size_t &pos) {
-	Token tok = Token(ERROR, lex);
+	
 	// От частного к общему
+	//lex = CalculateFullLexInList(lexemes, pos);
+	Token tok = Token(ERROR, lex);
 
 	if (tryToMakeString(lex, lexemes, pos)) {
 		tok = Token(STRING, lex);
@@ -850,9 +924,12 @@ Token CalculateToken(string &lex, const vector<string> &lexemes, size_t &pos) {
 	else if (tryToMakeFloatWithoutPoint(lex, lexemes, pos)) {
 		tok = Token(FLOAT, lex);
 	}
-	else if (tryToMakeFixedFloat(lex, lexemes, pos)) {
+	/*else if (tryToMakeFixedFloat(lex, lexemes, pos)) {
+		tok = Token(FLOAT, lex);
+	}*/
+	else if (isFixedFloat(lex)) {
 		tok = Token(FIXED_FLOAT, lex);
-	}
+	}	
 	else if (tryToMakeFixedFloatWithoutZero(lex, lexemes, pos)) {
 		tok = Token(FIXED_FLOAT, lex);
 	}	
@@ -917,6 +994,7 @@ void SkipLineComment(string &currLex, size_t &i, const vector<string> &lexemes) 
 }
 
 void ProcessLexemesList(const vector<string> &lexemes) {
+	
 	for (size_t i = 0; i < lexemes.size(); i++) {
 		string currLex = lexemes[i];
 		
@@ -934,7 +1012,7 @@ void ProcessLexemesList(const vector<string> &lexemes) {
 			Token tok = CalculateToken(currLex, lexemes, i);
 			cout << tok.toString() << endl;
 		}
-	}	
+	}
 }
 
 int main(int argc, char* argv[]) {
@@ -949,27 +1027,24 @@ int main(int argc, char* argv[]) {
 		return 1;
 	}
 
-	vector<char> buffer;
 	vector<string> lexemes;
 
-	ReadDataToBuffer(input, buffer, 5);
-	string lexeme;
-	
-	for (size_t i = 0; i < buffer.size() && buffer[i] != EOF;) {
-		if (i == buffer.size()) {
-			auto lastElem = buffer.back();
-			buffer.clear();
-			buffer.push_back(lastElem);
-			i = 0;
-			ReadDataToBuffer(input, buffer, 5);
-		}
+	string lex;
+	bool end = false;
+	while (!end) {
+		lex = ReadLexeme(input);
 
-		lexeme = ReadLexeme(buffer, i);
-		lexemes.push_back(lexeme);
+		if (lex != "") {
+			lexemes.push_back(lex);
+		}
+		if (input.eof()) {
+			end = true;
+			break;
+		}
+		
 	}
 
 	ProcessLexemesList(lexemes);
-	lexemes.clear();
 
 	return 0;
 }
